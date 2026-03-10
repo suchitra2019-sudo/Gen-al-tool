@@ -5,10 +5,11 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import os
 
-st.set_page_config(page_title="Professional Invoice System")
+st.set_page_config(page_title="Invoice Generator")
 
-st.title("Professional GST Invoice Generator")
+st.title("Professional Invoice Generator")
 
+# Create invoice folder
 os.makedirs("invoices", exist_ok=True)
 
 # ---------------- DATABASE ----------------
@@ -37,7 +38,9 @@ price REAL
 )
 """)
 
-# ---------------- AUTO INVOICE NUMBER FIX ----------------
+conn.commit()
+
+# ---------------- AUTO INVOICE NUMBER ----------------
 
 cursor.execute("SELECT MAX(invoice_no) FROM invoices")
 result = cursor.fetchone()
@@ -49,21 +52,25 @@ else:
 
 st.subheader(f"Invoice No: {invoice_no}")
 
-# ---------------- FORM ----------------
+# ---------------- CUSTOMER DETAILS ----------------
 
 date = st.date_input("Invoice Date")
 
 customer = st.text_input("Customer Name")
+
 contact = st.text_input("Contact Number")
+
 gstin = st.text_input("GSTIN")
 
 address = st.text_area("Customer Address")
+
+# ---------------- ITEMS ----------------
 
 st.subheader("Invoice Items")
 
 items = []
 
-num_items = st.number_input("Number of Items",1,10,1)
+num_items = st.number_input("Number of Items",1,20,1)
 
 for i in range(int(num_items)):
 
@@ -73,10 +80,10 @@ for i in range(int(num_items)):
         desc = st.text_input(f"Description {i+1}")
 
     with col2:
-        qty = st.number_input(f"Qty {i+1}",1)
+        qty = st.number_input(f"Qty {i+1}",min_value=1)
 
     with col3:
-        price = st.number_input(f"Price {i+1}",0.0)
+        price = st.number_input(f"Price {i+1}",min_value=0.0)
 
     items.append((desc,qty,price))
 
@@ -88,34 +95,41 @@ gst_rate = st.number_input("GST %",18.0)
 
 subtotal = sum(q*p for _,q,p in items)
 
-gst_total = subtotal * gst_rate / 100
+gst_amount = subtotal * gst_rate / 100
 
-cgst = gst_total / 2
-sgst = gst_total / 2
+total = subtotal + gst_amount + transport
 
-total = subtotal + gst_total + transport
+st.write("Subtotal:", subtotal)
 
-st.write("Subtotal:",subtotal)
-st.write("CGST:",cgst)
-st.write("SGST:",sgst)
-st.write("Total:",total)
+st.write("GST Amount:", gst_amount)
+
+st.write("Transport:", transport)
+
+st.write("Grand Total:", total)
 
 # ---------------- GENERATE INVOICE ----------------
 
 if st.button("Generate Invoice"):
 
-    cursor.execute(
+    try:
+
+        cursor.execute(
         "INSERT INTO invoices (invoice_no,customer,contact,gstin,date,total) VALUES (?,?,?,?,?,?)",
         (invoice_no,customer,contact,gstin,str(date),total)
-    )
-
-    for desc,qty,price in items:
-        cursor.execute(
-            "INSERT INTO invoice_items VALUES (?,?,?,?)",
-            (invoice_no,desc,qty,price)
         )
 
-    conn.commit()
+        for desc,qty,price in items:
+            cursor.execute(
+            "INSERT INTO invoice_items VALUES (?,?,?,?)",
+            (invoice_no,desc,qty,price)
+            )
+
+        conn.commit()
+
+    except Exception as e:
+        st.error(f"Database Error: {e}")
+
+    # ---------------- PDF GENERATION ----------------
 
     pdf_file = f"invoices/invoice_{invoice_no}.pdf"
 
@@ -124,18 +138,18 @@ if st.button("Generate Invoice"):
     width,height = A4
 
     c.setFont("Helvetica-Bold",16)
-    c.drawString(220,height-50,"TAX INVOICE")
+    c.drawString(230,height-50,"TAX INVOICE")
 
     c.setFont("Helvetica",11)
 
-    c.drawString(50,height-120,f"Invoice No: {invoice_no}")
-    c.drawString(50,height-140,f"Date: {date}")
+    c.drawString(50,height-100,f"Invoice No: {invoice_no}")
+    c.drawString(50,height-120,f"Date: {date}")
 
-    c.drawString(50,height-170,f"Customer: {customer}")
-    c.drawString(50,height-190,f"Contact: {contact}")
-    c.drawString(50,height-210,f"GSTIN: {gstin}")
+    c.drawString(50,height-150,f"Customer: {customer}")
+    c.drawString(50,height-170,f"Contact: {contact}")
+    c.drawString(50,height-190,f"GSTIN: {gstin}")
 
-    y = height-260
+    y = height-240
 
     c.drawString(50,y,"Description")
     c.drawString(300,y,"Qty")
@@ -148,28 +162,29 @@ if st.button("Generate Invoice"):
 
         line_total = qty * price
 
-        c.drawString(50,y,desc)
+        c.drawString(50,y,str(desc))
         c.drawString(300,y,str(qty))
         c.drawString(350,y,str(price))
         c.drawString(420,y,str(line_total))
 
         y -= 20
 
-    y -= 10
+    y -= 20
 
     c.drawString(350,y,f"Subtotal: {subtotal}")
+
     y -= 20
 
-    c.drawString(350,y,f"CGST: {cgst}")
-    y -= 20
+    c.drawString(350,y,f"GST: {gst_amount}")
 
-    c.drawString(350,y,f"SGST: {sgst}")
     y -= 20
 
     c.drawString(350,y,f"Transport: {transport}")
+
     y -= 20
 
     c.setFont("Helvetica-Bold",12)
+
     c.drawString(350,y,f"Grand Total: {total}")
 
     c.save()
