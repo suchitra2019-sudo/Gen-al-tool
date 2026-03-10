@@ -60,7 +60,7 @@ company_name = st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
 
 company_gst = st.sidebar.text_input("Company GSTIN","27CFKPP2024L1Z7")
 
-company_address = st.sidebar.text_area("HOUSE NO-301 VAJRESHWARI ROAD, AT,ZIDKE POST DIGASHI TAL.BHIWANDI, DIST.THANE")
+company_address = st.sidebar.text_area("Company Address","HOUSE NO-301 VAJRESHWARI ROAD, AT,ZIDKE POST DIGASHI TAL.BHIWANDI, DIST.THANE")
 
 # ---------------- CUSTOMER DETAILS ----------------
 
