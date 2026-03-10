@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GST Invoice</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>GST Invoice Form</h1>
+        <form method="post" action="/generate">
+            <label>Invoice Number</label>
+            <input type="text" name="invoice_number" required>
+            <label>Date</label>
+            <input type="date" name="date" required>
+            <label>Customer Name</label>
+            <input type="text" name="customer_name" required>
+            <label>Customer Address</label>
+            <input type="text" name="customer_address" required>
+            <label>Item Description</label>
+            <input type="text" name="item_desc" required>
+            <label>Quantity</label>
+            <input type="number" name="quantity" min="1" required>
+            <label>Rate</label>
+            <input type="number" name="rate" min="0" step="0.01" required>
+            <label>GST (%)</label>
+            <input type="number" name="gst" min="0" step="0.01" required>
+            <button type="submit">Generate Invoice</button>
+        </form>
+    </div>
+</body>
+</html>
