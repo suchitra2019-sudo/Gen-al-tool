@@ -1,72 +1,139 @@
 import streamlit as st
 import pandas as pd
-from fpdf import FPDF
+import sqlite3
+from docx import Document
+from reportlab.pdfgen import canvas
+from openpyxl import Workbook
 import os
 
-st.title("GST Invoice Generator")
+st.title("Professional Invoice Generator")
 
+# Create folders
 os.makedirs("invoices", exist_ok=True)
 
-invoice_number = st.text_input("Invoice Number")
-date = st.date_input("Date")
-customer_name = st.text_input("Customer Name")
-customer_address = st.text_area("Customer Address")
-item_desc = st.text_input("Item Description")
-quantity = st.number_input("Quantity", min_value=1)
-rate = st.number_input("Rate", min_value=0.0)
-gst = st.number_input("GST %", min_value=0.0)
+# Database
+conn = sqlite3.connect("invoice.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS invoices(
+invoice_no TEXT,
+customer TEXT,
+date TEXT,
+amount REAL
+)
+""")
+
+# ---------------- FORM ----------------
+
+st.header("Create Invoice")
+
+invoice_no = st.text_input("Invoice Number")
+date = st.date_input("Invoice Date")
+
+customer = st.text_input("Customer Name")
+address = st.text_area("Customer Address")
+
+item = st.text_input("Item Description")
+qty = st.number_input("Quantity", 1)
+price = st.number_input("Price", 0.0)
+
+gst = st.number_input("GST %", 0.0)
 
 if st.button("Generate Invoice"):
 
-    amount = quantity * rate
-    gst_amount = amount * gst / 100
-    total = amount + gst_amount
+    subtotal = qty * price
+    gst_amount = subtotal * gst / 100
+    total = subtotal + gst_amount
 
-    data = {
-        "Invoice Number": invoice_number,
-        "Date": str(date),
-        "Customer Name": customer_name,
-        "Customer Address": customer_address,
-        "Item Description": item_desc,
-        "Quantity": quantity,
-        "Rate": rate,
-        "GST %": gst,
-        "Amount": amount,
-        "GST Amount": gst_amount,
-        "Total": total
-    }
+    # Save History
+    cursor.execute(
+        "INSERT INTO invoices VALUES (?,?,?,?)",
+        (invoice_no, customer, str(date), total)
+    )
+    conn.commit()
 
-    df = pd.DataFrame([data])
+    # ---------------- EXCEL ----------------
 
-    excel_path = f"invoices/{invoice_number}.xlsx"
-    pdf_path = f"invoices/{invoice_number}.pdf"
+    excel_file = f"invoices/{invoice_no}.xlsx"
 
-    df.to_excel(excel_path, index=False)
+    df = pd.DataFrame({
+        "Invoice No":[invoice_no],
+        "Customer":[customer],
+        "Item":[item],
+        "Qty":[qty],
+        "Price":[price],
+        "Subtotal":[subtotal],
+        "GST":[gst_amount],
+        "Total":[total]
+    })
 
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
+    df.to_excel(excel_file, index=False)
 
-    pdf.cell(200, 10, txt="GST Invoice", ln=True, align="C")
-    pdf.ln(10)
+    # ---------------- WORD ----------------
 
-    for key, value in data.items():
-        pdf.cell(200, 10, txt=f"{key}: {value}", ln=True)
+    word_file = f"invoices/{invoice_no}.docx"
 
-    pdf.output(pdf_path)
+    doc = Document()
+    doc.add_heading("TAX INVOICE", 0)
 
-    st.success("Invoice Generated Successfully!")
+    doc.add_paragraph(f"Invoice No: {invoice_no}")
+    doc.add_paragraph(f"Customer: {customer}")
+    doc.add_paragraph(f"Address: {address}")
 
-    with open(excel_path, "rb") as file:
-        st.download_button(
-            label="Download Excel",
-            data=file,
-            file_name=f"{invoice_number}.xlsx"
-        )
+    table = doc.add_table(rows=2, cols=5)
+    table.rows[0].cells[0].text = "Item"
+    table.rows[0].cells[1].text = "Qty"
+    table.rows[0].cells[2].text = "Price"
+    table.rows[0].cells[3].text = "GST"
+    table.rows[0].cells[4].text = "Total"
 
-    with open(pdf_path, "rb") as file:
-        st.download_button(
-            label="Download PDF",
-            data=file,
-            file_name=f"{invoice_number}.pdf"
-        )
+    table.rows[1].cells[0].text = item
+    table.rows[1].cells[1].text = str(qty)
+    table.rows[1].cells[2].text = str(price)
+    table.rows[1].cells[3].text = str(gst_amount)
+    table.rows[1].cells[4].text = str(total)
+
+    doc.save(word_file)
+
+    # ---------------- PDF ----------------
+
+    pdf_file = f"invoices/{invoice_no}.pdf"
+
+    c = canvas.Canvas(pdf_file)
+    c.setFont("Helvetica", 12)
+
+    c.drawString(200, 800, "TAX INVOICE")
+
+    c.drawString(50, 750, f"Invoice No: {invoice_no}")
+    c.drawString(50, 730, f"Customer: {customer}")
+    c.drawString(50, 710, f"Item: {item}")
+
+    c.drawString(50, 680, f"Qty: {qty}")
+    c.drawString(50, 660, f"Price: {price}")
+
+    c.drawString(50, 640, f"GST: {gst_amount}")
+    c.drawString(50, 620, f"Total: {total}")
+
+    c.save()
+
+    st.success("Invoice Created!")
+
+    # Download buttons
+
+    with open(pdf_file,"rb") as f:
+        st.download_button("Download PDF",f,file_name=f"{invoice_no}.pdf")
+
+    with open(word_file,"rb") as f:
+        st.download_button("Download Word",f,file_name=f"{invoice_no}.docx")
+
+    with open(excel_file,"rb") as f:
+        st.download_button("Download Excel",f,file_name=f"{invoice_no}.xlsx")
+
+# ---------------- HISTORY ----------------
+
+st.header("Invoice History")
+
+df = pd.read_sql("SELECT * FROM invoices", conn)
+
+st.dataframe(df)
