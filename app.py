@@ -16,9 +16,13 @@ os.makedirs("invoices", exist_ok=True)
 conn = sqlite3.connect("invoice.db", check_same_thread=False)
 cursor = conn.cursor()
 
-# Create table if not exists
+# Reset tables to avoid column mismatch errors
+cursor.execute("DROP TABLE IF EXISTS invoices")
+cursor.execute("DROP TABLE IF EXISTS invoice_items")
+
+# Create fresh tables
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS invoices(
+CREATE TABLE invoices(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 invoice_no INTEGER,
 customer TEXT,
@@ -30,7 +34,7 @@ total REAL
 """)
 
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS invoice_items(
+CREATE TABLE invoice_items(
 invoice_no INTEGER,
 description TEXT,
 qty INTEGER,
@@ -70,30 +74,30 @@ st.subheader("Invoice Items")
 
 items = []
 
-num_items = st.number_input("Number of Items",1,20,1)
+num_items = st.number_input("Number of Items", 1, 20, 1)
 
 for i in range(int(num_items)):
 
-    col1,col2,col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         desc = st.text_input(f"Description {i+1}")
 
     with col2:
-        qty = st.number_input(f"Qty {i+1}",min_value=1)
+        qty = st.number_input(f"Qty {i+1}", min_value=1)
 
     with col3:
-        price = st.number_input(f"Price {i+1}",min_value=0.0)
+        price = st.number_input(f"Price {i+1}", min_value=0.0)
 
-    items.append((desc,qty,price))
+    items.append((desc, qty, price))
 
-transport = st.number_input("Transport Charges",0.0)
+transport = st.number_input("Transport Charges", 0.0)
 
-gst_rate = st.number_input("GST %",18.0)
+gst_rate = st.number_input("GST %", 18.0)
 
 # ---------------- CALCULATIONS ----------------
 
-subtotal = sum(q*p for _,q,p in items)
+subtotal = sum(q * p for _, q, p in items)
 
 gst_amount = subtotal * gst_rate / 100
 
@@ -108,88 +112,82 @@ st.write("Grand Total:", total)
 
 if st.button("Generate Invoice"):
 
-    try:
-
-        cursor.execute(
+    cursor.execute(
         "INSERT INTO invoices (invoice_no,customer,contact,gstin,date,total) VALUES (?,?,?,?,?,?)",
-        (invoice_no,customer,contact,gstin,str(date),total)
+        (invoice_no, customer, contact, gstin, str(date), total)
+    )
+
+    for desc, qty, price in items:
+        cursor.execute(
+            "INSERT INTO invoice_items VALUES (?,?,?,?)",
+            (invoice_no, desc, qty, price)
         )
 
-        for desc,qty,price in items:
-            cursor.execute(
-            "INSERT INTO invoice_items VALUES (?,?,?,?)",
-            (invoice_no,desc,qty,price)
-            )
-
-        conn.commit()
-
-    except Exception as e:
-        st.error(f"Database Error: {e}")
+    conn.commit()
 
     # ---------------- PDF ----------------
 
     pdf_file = f"invoices/invoice_{invoice_no}.pdf"
 
-    c = canvas.Canvas(pdf_file,pagesize=A4)
+    c = canvas.Canvas(pdf_file, pagesize=A4)
 
-    width,height = A4
+    width, height = A4
 
-    c.setFont("Helvetica-Bold",16)
-    c.drawString(230,height-50,"TAX INVOICE")
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(230, height-50, "TAX INVOICE")
 
-    c.setFont("Helvetica",11)
+    c.setFont("Helvetica", 11)
 
-    c.drawString(50,height-100,f"Invoice No: {invoice_no}")
-    c.drawString(50,height-120,f"Date: {date}")
+    c.drawString(50, height-100, f"Invoice No: {invoice_no}")
+    c.drawString(50, height-120, f"Date: {date}")
 
-    c.drawString(50,height-150,f"Customer: {customer}")
-    c.drawString(50,height-170,f"Contact: {contact}")
-    c.drawString(50,height-190,f"GSTIN: {gstin}")
+    c.drawString(50, height-150, f"Customer: {customer}")
+    c.drawString(50, height-170, f"Contact: {contact}")
+    c.drawString(50, height-190, f"GSTIN: {gstin}")
 
     y = height-240
 
-    c.drawString(50,y,"Description")
-    c.drawString(300,y,"Qty")
-    c.drawString(350,y,"Price")
-    c.drawString(420,y,"Total")
+    c.drawString(50, y, "Description")
+    c.drawString(300, y, "Qty")
+    c.drawString(350, y, "Price")
+    c.drawString(420, y, "Total")
 
     y -= 20
 
-    for desc,qty,price in items:
+    for desc, qty, price in items:
 
         line_total = qty * price
 
-        c.drawString(50,y,str(desc))
-        c.drawString(300,y,str(qty))
-        c.drawString(350,y,str(price))
-        c.drawString(420,y,str(line_total))
+        c.drawString(50, y, str(desc))
+        c.drawString(300, y, str(qty))
+        c.drawString(350, y, str(price))
+        c.drawString(420, y, str(line_total))
 
         y -= 20
 
     y -= 20
 
-    c.drawString(350,y,f"Subtotal: {subtotal}")
+    c.drawString(350, y, f"Subtotal: {subtotal}")
 
     y -= 20
 
-    c.drawString(350,y,f"GST: {gst_amount}")
+    c.drawString(350, y, f"GST: {gst_amount}")
 
     y -= 20
 
-    c.drawString(350,y,f"Transport: {transport}")
+    c.drawString(350, y, f"Transport: {transport}")
 
     y -= 20
 
-    c.setFont("Helvetica-Bold",12)
-
-    c.drawString(350,y,f"Grand Total: {total}")
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(350, y, f"Grand Total: {total}")
 
     c.save()
 
     st.success("Invoice Generated Successfully")
 
-    with open(pdf_file,"rb") as f:
-        st.download_button("Download PDF",f,file_name=f"invoice_{invoice_no}.pdf")
+    with open(pdf_file, "rb") as f:
+        st.download_button("Download PDF", f, file_name=f"invoice_{invoice_no}.pdf")
 
 # ---------------- HISTORY ----------------
 
@@ -202,6 +200,6 @@ query = "SELECT * FROM invoices"
 if search:
     query += f" WHERE customer LIKE '%{search}%'"
 
-df = pd.read_sql(query,conn)
+df = pd.read_sql(query, conn)
 
 st.dataframe(df)
