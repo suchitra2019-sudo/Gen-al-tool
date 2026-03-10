@@ -1,13 +1,15 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-from docx import Document
+from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from docx import Document
 import os
 
-st.title("Professional Invoice Generator")
+st.set_page_config(page_title="Professional Invoice System")
 
-# Create folder
+st.title("Professional GST Invoice Generator")
+
 os.makedirs("invoices", exist_ok=True)
 
 # ---------------- DATABASE ----------------
@@ -18,30 +20,38 @@ cursor = conn.cursor()
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS invoices(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
-invoice_no TEXT,
+invoice_no INTEGER,
 customer TEXT,
+contact TEXT,
+gstin TEXT,
 date TEXT,
-amount REAL
+total REAL
 )
 """)
 
-# Add missing columns safely
-columns_to_add = {
-    "contact": "TEXT",
-    "gstin": "TEXT"
-}
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS invoice_items(
+invoice_no INTEGER,
+description TEXT,
+qty INTEGER,
+price REAL
+)
+""")
 
-for column, datatype in columns_to_add.items():
-    try:
-        cursor.execute(f"ALTER TABLE invoices ADD COLUMN {column} {datatype}")
-    except:
-        pass
+# ---------------- AUTO INVOICE NUMBER ----------------
+
+cursor.execute("SELECT MAX(invoice_no) FROM invoices")
+last_invoice = cursor.fetchone()[0]
+
+if last_invoice is None:
+    invoice_no = 1001
+else:
+    invoice_no = last_invoice + 1
+
+st.subheader(f"Invoice No: {invoice_no}")
 
 # ---------------- FORM ----------------
 
-st.header("Create Invoice")
-
-invoice_no = st.text_input("Invoice Number")
 date = st.date_input("Invoice Date")
 
 customer = st.text_input("Customer Name")
@@ -50,126 +60,156 @@ gstin = st.text_input("GSTIN")
 
 address = st.text_area("Customer Address")
 
-item = st.text_input("Item Description")
-qty = st.number_input("Quantity", min_value=1)
-price = st.number_input("Price", min_value=0.0)
+st.subheader("Invoice Items")
 
-transport = st.number_input("Transport Rate", min_value=0.0)
+items = []
 
-gst = st.number_input("GST %", min_value=0.0)
+num_items = st.number_input("Number of Items", 1, 10, 1)
 
-# ---------------- CALCULATION ----------------
+for i in range(int(num_items)):
+    col1,col2,col3 = st.columns(3)
+
+    with col1:
+        desc = st.text_input(f"Description {i+1}")
+
+    with col2:
+        qty = st.number_input(f"Qty {i+1}", min_value=1)
+
+    with col3:
+        price = st.number_input(f"Price {i+1}", min_value=0.0)
+
+    items.append((desc,qty,price))
+
+transport = st.number_input("Transport Charges",0.0)
+
+gst_rate = st.number_input("GST %",18.0)
+
+# ---------------- CALCULATIONS ----------------
+
+subtotal = sum(q*p for _,q,p in items)
+
+gst_total = subtotal * gst_rate / 100
+
+cgst = gst_total / 2
+sgst = gst_total / 2
+
+total = subtotal + gst_total + transport
+
+st.write("Subtotal:",subtotal)
+st.write("CGST:",cgst)
+st.write("SGST:",sgst)
+st.write("Total:",total)
+
+# ---------------- GENERATE INVOICE ----------------
 
 if st.button("Generate Invoice"):
 
-    subtotal = qty * price
-    gst_amount = subtotal * gst / 100
-    total = subtotal + gst_amount + transport
+    cursor.execute(
+        "INSERT INTO invoices (invoice_no,customer,contact,gstin,date,total) VALUES (?,?,?,?,?,?)",
+        (invoice_no,customer,contact,gstin,str(date),total)
+    )
 
-    # Save history safely
-    try:
+    for desc,qty,price in items:
         cursor.execute(
-            "INSERT INTO invoices (invoice_no, customer, contact, gstin, date, amount) VALUES (?,?,?,?,?,?)",
-            (invoice_no, customer, contact, gstin, str(date), total)
+            "INSERT INTO invoice_items VALUES (?,?,?,?)",
+            (invoice_no,desc,qty,price)
         )
-        conn.commit()
-    except Exception as e:
-        st.error(f"Database Error: {e}")
 
-    # ---------------- EXCEL ----------------
-
-    excel_file = f"invoices/{invoice_no}.xlsx"
-
-    df = pd.DataFrame({
-        "Invoice No":[invoice_no],
-        "Date":[date],
-        "Customer":[customer],
-        "Contact":[contact],
-        "GSTIN":[gstin],
-        "Address":[address],
-        "Item":[item],
-        "Qty":[qty],
-        "Price":[price],
-        "Transport":[transport],
-        "Subtotal":[subtotal],
-        "GST":[gst_amount],
-        "Total":[total]
-    })
-
-    df.to_excel(excel_file, index=False)
-
-    # ---------------- WORD ----------------
-
-    word_file = f"invoices/{invoice_no}.docx"
-
-    doc = Document()
-    doc.add_heading("TAX INVOICE", 0)
-
-    doc.add_paragraph(f"Invoice No: {invoice_no}")
-    doc.add_paragraph(f"Date: {date}")
-
-    doc.add_paragraph(f"Customer: {customer}")
-    doc.add_paragraph(f"Contact: {contact}")
-    doc.add_paragraph(f"GSTIN: {gstin}")
-    doc.add_paragraph(f"Address: {address}")
-
-    table = doc.add_table(rows=2, cols=6)
-
-    headers = ["Item","Qty","Price","Transport","GST","Total"]
-
-    for i,h in enumerate(headers):
-        table.rows[0].cells[i].text = h
-
-    values = [item,qty,price,transport,gst_amount,total]
-
-    for i,v in enumerate(values):
-        table.rows[1].cells[i].text = str(v)
-
-    doc.save(word_file)
+    conn.commit()
 
     # ---------------- PDF ----------------
 
-    pdf_file = f"invoices/{invoice_no}.pdf"
+    pdf_file = f"invoices/invoice_{invoice_no}.pdf"
 
-    c = canvas.Canvas(pdf_file)
-    c.setFont("Helvetica", 12)
+    c = canvas.Canvas(pdf_file,pagesize=A4)
 
-    c.drawString(200,800,"TAX INVOICE")
+    width,height = A4
 
-    c.drawString(50,760,f"Invoice No: {invoice_no}")
-    c.drawString(50,740,f"Date: {date}")
+    # Logo
+    if os.path.exists("logo.png"):
+        c.drawImage("logo.png",50,height-80,width=100)
 
-    c.drawString(50,710,f"Customer: {customer}")
-    c.drawString(50,690,f"Contact: {contact}")
-    c.drawString(50,670,f"GSTIN: {gstin}")
+    c.setFont("Helvetica-Bold",16)
+    c.drawString(220,height-50,"TAX INVOICE")
 
-    c.drawString(50,640,f"Item: {item}")
-    c.drawString(50,620,f"Quantity: {qty}")
-    c.drawString(50,600,f"Price: {price}")
+    c.setFont("Helvetica",11)
 
-    c.drawString(50,580,f"Transport Rate: {transport}")
+    c.drawString(50,height-120,f"Invoice No: {invoice_no}")
+    c.drawString(50,height-140,f"Date: {date}")
 
-    c.drawString(50,550,f"GST Amount: {gst_amount}")
-    c.drawString(50,530,f"Total Amount: {total}")
+    c.drawString(50,height-170,f"Customer: {customer}")
+    c.drawString(50,height-190,f"Contact: {contact}")
+    c.drawString(50,height-210,f"GSTIN: {gstin}")
+
+    y = height-260
+
+    c.drawString(50,y,"Description")
+    c.drawString(300,y,"Qty")
+    c.drawString(350,y,"Price")
+    c.drawString(420,y,"Total")
+
+    y -= 20
+
+    for desc,qty,price in items:
+        line_total = qty * price
+
+        c.drawString(50,y,desc)
+        c.drawString(300,y,str(qty))
+        c.drawString(350,y,str(price))
+        c.drawString(420,y,str(line_total))
+
+        y -= 20
+
+    y -= 10
+
+    c.drawString(350,y,f"Subtotal: {subtotal}")
+    y -= 20
+
+    c.drawString(350,y,f"CGST: {cgst}")
+    y -= 20
+
+    c.drawString(350,y,f"SGST: {sgst}")
+    y -= 20
+
+    c.drawString(350,y,f"Transport: {transport}")
+    y -= 20
+
+    c.setFont("Helvetica-Bold",12)
+    c.drawString(350,y,f"Grand Total: {total}")
 
     c.save()
 
-    st.success("Invoice Created Successfully!")
+    st.success("Invoice Generated Successfully")
 
-    # Download buttons
     with open(pdf_file,"rb") as f:
-        st.download_button("Download PDF",f,file_name=f"{invoice_no}.pdf")
-
-    with open(word_file,"rb") as f:
-        st.download_button("Download Word",f,file_name=f"{invoice_no}.docx")
-
-    with open(excel_file,"rb") as f:
-        st.download_button("Download Excel",f,file_name=f"{invoice_no}.xlsx")
+        st.download_button("Download PDF",f,file_name=f"invoice_{invoice_no}.pdf")
 
 # ---------------- HISTORY ----------------
 
 st.header("Invoice History")
 
-history = pd.read_sql("SELECT * FROM invoices", conn)
+search = st.text_input("Search Customer")
 
-st.dataframe(history)
+query = "SELECT * FROM invoices"
+
+if search:
+    query += f" WHERE customer LIKE '%{search}%'"
+
+df = pd.read_sql(query,conn)
+
+st.dataframe(df)
+
+# ---------------- EDIT INVOICE ----------------
+
+st.subheader("Edit Invoice")
+
+edit_id = st.number_input("Enter Invoice No to Edit",0)
+
+if st.button("Load Invoice"):
+
+    data = pd.read_sql(f"SELECT * FROM invoices WHERE invoice_no={edit_id}",conn)
+
+    if len(data)>0:
+        st.write(data)
+    else:
+        st.warning("Invoice not found")
