@@ -9,7 +9,6 @@ st.set_page_config(page_title="Invoice Generator")
 
 st.title("Professional Invoice Generator")
 
-# Create invoice folder
 os.makedirs("invoices", exist_ok=True)
 
 # ---------------- DATABASE ----------------
@@ -17,6 +16,7 @@ os.makedirs("invoices", exist_ok=True)
 conn = sqlite3.connect("invoice.db", check_same_thread=False)
 cursor = conn.cursor()
 
+# Create table if not exists
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS invoices(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,7 +91,7 @@ transport = st.number_input("Transport Charges",0.0)
 
 gst_rate = st.number_input("GST %",18.0)
 
-# ---------------- CALCULATION ----------------
+# ---------------- CALCULATIONS ----------------
 
 subtotal = sum(q*p for _,q,p in items)
 
@@ -100,11 +100,8 @@ gst_amount = subtotal * gst_rate / 100
 total = subtotal + gst_amount + transport
 
 st.write("Subtotal:", subtotal)
-
 st.write("GST Amount:", gst_amount)
-
 st.write("Transport:", transport)
-
 st.write("Grand Total:", total)
 
 # ---------------- GENERATE INVOICE ----------------
@@ -129,7 +126,7 @@ if st.button("Generate Invoice"):
     except Exception as e:
         st.error(f"Database Error: {e}")
 
-    # ---------------- PDF GENERATION ----------------
+    # ---------------- PDF ----------------
 
     pdf_file = f"invoices/invoice_{invoice_no}.pdf"
 
