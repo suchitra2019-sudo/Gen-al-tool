@@ -1,48 +1,47 @@
-from flask import Flask, render_template, request, send_file
-import os
+import streamlit as st
 import pandas as pd
 from fpdf import FPDF
+import os
 
-app = Flask(__name__)
+st.title("GST Invoice Generator")
 
-# Create invoices folder if it doesn't exist
 os.makedirs("invoices", exist_ok=True)
 
-@app.route('/')
-def index():
-    return render_template('invoice.html')
+invoice_number = st.text_input("Invoice Number")
+date = st.date_input("Date")
+customer_name = st.text_input("Customer Name")
+customer_address = st.text_area("Customer Address")
+item_desc = st.text_input("Item Description")
+quantity = st.number_input("Quantity", min_value=1)
+rate = st.number_input("Rate", min_value=0.0)
+gst = st.number_input("GST %", min_value=0.0)
 
+if st.button("Generate Invoice"):
 
-@app.route('/generate', methods=['POST'])
-def generate():
-    
-    data = {
-        'invoice_number': request.form['invoice_number'],
-        'date': request.form['date'],
-        'customer_name': request.form['customer_name'],
-        'customer_address': request.form['customer_address'],
-        'item_desc': request.form['item_desc'],
-        'quantity': int(request.form['quantity']),
-        'rate': float(request.form['rate']),
-        'gst': float(request.form['gst'])
-    }
-
-    # Calculations
-    amount = data['quantity'] * data['rate']
-    gst_amount = amount * data['gst'] / 100
+    amount = quantity * rate
+    gst_amount = amount * gst / 100
     total = amount + gst_amount
 
-    data['amount'] = amount
-    data['gst_amount'] = gst_amount
-    data['total'] = total
+    data = {
+        "Invoice Number": invoice_number,
+        "Date": str(date),
+        "Customer Name": customer_name,
+        "Customer Address": customer_address,
+        "Item Description": item_desc,
+        "Quantity": quantity,
+        "Rate": rate,
+        "GST %": gst,
+        "Amount": amount,
+        "GST Amount": gst_amount,
+        "Total": total
+    }
 
-    # Save Excel
-    excel_path = f"invoices/{data['invoice_number']}.xlsx"
     df = pd.DataFrame([data])
-    df.to_excel(excel_path, index=False)
 
-    # Generate PDF
-    pdf_path = f"invoices/{data['invoice_number']}.pdf"
+    excel_path = f"invoices/{invoice_number}.xlsx"
+    pdf_path = f"invoices/{invoice_number}.pdf"
+
+    df.to_excel(excel_path, index=False)
 
     pdf = FPDF()
     pdf.add_page()
@@ -52,36 +51,22 @@ def generate():
     pdf.ln(10)
 
     for key, value in data.items():
-        pdf.cell(200, 10, txt=f"{key.replace('_',' ').title()}: {value}", ln=True)
+        pdf.cell(200, 10, txt=f"{key}: {value}", ln=True)
 
     pdf.output(pdf_path)
 
-    return f"""
-    <div style='text-align:center;margin-top:40px;font-family:Arial'>
-        <h2>✅ Invoice Generated Successfully</h2>
+    st.success("Invoice Generated Successfully!")
 
-        <a href='/invoices/{data['invoice_number']}.xlsx' download>
-        Download Excel
-        </a>
+    with open(excel_path, "rb") as file:
+        st.download_button(
+            label="Download Excel",
+            data=file,
+            file_name=f"{invoice_number}.xlsx"
+        )
 
-        <br><br>
-
-        <a href='/invoices/{data['invoice_number']}.pdf' download>
-        Download PDF
-        </a>
-
-        <br><br>
-
-        <a href='/'>Create Another Invoice</a>
-    </div>
-    """
-
-
-@app.route('/invoices/<filename>')
-def download_invoice(filename):
-    path = f"invoices/{filename}"
-    return send_file(path, as_attachment=True)
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    with open(pdf_path, "rb") as file:
+        st.download_button(
+            label="Download PDF",
+            data=file,
+            file_name=f"{invoice_number}.pdf"
+        )
