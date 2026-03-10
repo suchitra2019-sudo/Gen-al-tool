@@ -56,11 +56,11 @@ st.subheader(f"Invoice No: {invoice_no}")
 
 st.sidebar.header("Company Details")
 
-company_name = st.sidebar.text_input("Company Name","Your Company Pvt Ltd")
+company_name = st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
 
-company_gst = st.sidebar.text_input("Company GSTIN","22AAAAA0000A1Z5")
+company_gst = st.sidebar.text_input("Company GSTIN","27CFKPP2024L1Z7")
 
-company_address = st.sidebar.text_area("Company Address")
+company_address = st.sidebar.text_area("HOUSE NO-301 VAJRESHWARI ROAD, AT,ZIDKE POST DIGASHI TAL.BHIWANDI, DIST.THANE")
 
 # ---------------- CUSTOMER DETAILS ----------------
 
@@ -148,6 +148,8 @@ if st.button("Generate Invoice"):
     c.setFont("Helvetica",11)
     c.drawString(150,height-70,company_address)
 
+
+    
     c.drawString(150,height-90,f"GSTIN: {company_gst}")
 
     c.drawString(40,height-130,f"Invoice No: {invoice_no}")
