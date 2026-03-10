@@ -56,8 +56,8 @@ if st.button("Generate Invoice"):
 
     # Save history
     cursor.execute(
-        "INSERT INTO invoices VALUES (?,?,?,?,?,?)",
-        (invoice_no, customer, contact, gstin, str(date), total)
+    "INSERT INTO invoices VALUES (?,?,?,?,?,?)",
+    (invoice_no, customer, contact, gstin, str(date), total)
     )
     conn.commit()
 
