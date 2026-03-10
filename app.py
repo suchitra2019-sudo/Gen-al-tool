@@ -10,22 +10,32 @@ st.title("Professional Invoice Generator")
 # Create folder
 os.makedirs("invoices", exist_ok=True)
 
-# Database
+# ---------------- DATABASE ----------------
+
 conn = sqlite3.connect("invoice.db", check_same_thread=False)
 cursor = conn.cursor()
 
-# Create table safely
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS invoices(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 invoice_no TEXT,
 customer TEXT,
-contact TEXT,
-gstin TEXT,
 date TEXT,
 amount REAL
 )
 """)
+
+# Add missing columns safely
+columns_to_add = {
+    "contact": "TEXT",
+    "gstin": "TEXT"
+}
+
+for column, datatype in columns_to_add.items():
+    try:
+        cursor.execute(f"ALTER TABLE invoices ADD COLUMN {column} {datatype}")
+    except:
+        pass
 
 # ---------------- FORM ----------------
 
@@ -147,7 +157,6 @@ if st.button("Generate Invoice"):
     st.success("Invoice Created Successfully!")
 
     # Download buttons
-
     with open(pdf_file,"rb") as f:
         st.download_button("Download PDF",f,file_name=f"{invoice_no}.pdf")
 
