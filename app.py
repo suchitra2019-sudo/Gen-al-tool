@@ -3,7 +3,6 @@ import pandas as pd
 import sqlite3
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from docx import Document
 import os
 
 st.set_page_config(page_title="Professional Invoice System")
@@ -38,15 +37,15 @@ price REAL
 )
 """)
 
-# ---------------- AUTO INVOICE NUMBER ----------------
+# ---------------- AUTO INVOICE NUMBER FIX ----------------
 
 cursor.execute("SELECT MAX(invoice_no) FROM invoices")
-last_invoice = cursor.fetchone()[0]
+result = cursor.fetchone()
 
-if last_invoice is None:
+if result is None or result[0] is None:
     invoice_no = 1001
 else:
-    invoice_no = last_invoice + 1
+    invoice_no = int(result[0]) + 1
 
 st.subheader(f"Invoice No: {invoice_no}")
 
@@ -64,19 +63,20 @@ st.subheader("Invoice Items")
 
 items = []
 
-num_items = st.number_input("Number of Items", 1, 10, 1)
+num_items = st.number_input("Number of Items",1,10,1)
 
 for i in range(int(num_items)):
+
     col1,col2,col3 = st.columns(3)
 
     with col1:
         desc = st.text_input(f"Description {i+1}")
 
     with col2:
-        qty = st.number_input(f"Qty {i+1}", min_value=1)
+        qty = st.number_input(f"Qty {i+1}",1)
 
     with col3:
-        price = st.number_input(f"Price {i+1}", min_value=0.0)
+        price = st.number_input(f"Price {i+1}",0.0)
 
     items.append((desc,qty,price))
 
@@ -84,7 +84,7 @@ transport = st.number_input("Transport Charges",0.0)
 
 gst_rate = st.number_input("GST %",18.0)
 
-# ---------------- CALCULATIONS ----------------
+# ---------------- CALCULATION ----------------
 
 subtotal = sum(q*p for _,q,p in items)
 
@@ -117,17 +117,11 @@ if st.button("Generate Invoice"):
 
     conn.commit()
 
-    # ---------------- PDF ----------------
-
     pdf_file = f"invoices/invoice_{invoice_no}.pdf"
 
     c = canvas.Canvas(pdf_file,pagesize=A4)
 
     width,height = A4
-
-    # Logo
-    if os.path.exists("logo.png"):
-        c.drawImage("logo.png",50,height-80,width=100)
 
     c.setFont("Helvetica-Bold",16)
     c.drawString(220,height-50,"TAX INVOICE")
@@ -151,6 +145,7 @@ if st.button("Generate Invoice"):
     y -= 20
 
     for desc,qty,price in items:
+
         line_total = qty * price
 
         c.drawString(50,y,desc)
@@ -198,18 +193,3 @@ if search:
 df = pd.read_sql(query,conn)
 
 st.dataframe(df)
-
-# ---------------- EDIT INVOICE ----------------
-
-st.subheader("Edit Invoice")
-
-edit_id = st.number_input("Enter Invoice No to Edit",0)
-
-if st.button("Load Invoice"):
-
-    data = pd.read_sql(f"SELECT * FROM invoices WHERE invoice_no={edit_id}",conn)
-
-    if len(data)>0:
-        st.write(data)
-    else:
-        st.warning("Invoice not found")
