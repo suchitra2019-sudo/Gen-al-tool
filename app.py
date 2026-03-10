@@ -3,12 +3,11 @@ import pandas as pd
 import sqlite3
 from docx import Document
 from reportlab.pdfgen import canvas
-from openpyxl import Workbook
 import os
 
 st.title("Professional Invoice Generator")
 
-# Create folders
+# Create folder
 os.makedirs("invoices", exist_ok=True)
 
 # Database
@@ -19,6 +18,8 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS invoices(
 invoice_no TEXT,
 customer TEXT,
+contact TEXT,
+gstin TEXT,
 date TEXT,
 amount REAL
 )
@@ -32,24 +33,31 @@ invoice_no = st.text_input("Invoice Number")
 date = st.date_input("Invoice Date")
 
 customer = st.text_input("Customer Name")
+contact = st.text_input("Contact Number")
+gstin = st.text_input("GSTIN")
+
 address = st.text_area("Customer Address")
 
 item = st.text_input("Item Description")
 qty = st.number_input("Quantity", 1)
 price = st.number_input("Price", 0.0)
 
+transport = st.number_input("Transport Rate", 0.0)
+
 gst = st.number_input("GST %", 0.0)
+
+# ---------------- CALCULATION ----------------
 
 if st.button("Generate Invoice"):
 
     subtotal = qty * price
     gst_amount = subtotal * gst / 100
-    total = subtotal + gst_amount
+    total = subtotal + gst_amount + transport
 
-    # Save History
+    # Save history
     cursor.execute(
-        "INSERT INTO invoices VALUES (?,?,?,?)",
-        (invoice_no, customer, str(date), total)
+        "INSERT INTO invoices VALUES (?,?,?,?,?,?)",
+        (invoice_no, customer, contact, gstin, str(date), total)
     )
     conn.commit()
 
@@ -59,10 +67,15 @@ if st.button("Generate Invoice"):
 
     df = pd.DataFrame({
         "Invoice No":[invoice_no],
+        "Date":[date],
         "Customer":[customer],
+        "Contact":[contact],
+        "GSTIN":[gstin],
+        "Address":[address],
         "Item":[item],
         "Qty":[qty],
         "Price":[price],
+        "Transport":[transport],
         "Subtotal":[subtotal],
         "GST":[gst_amount],
         "Total":[total]
@@ -78,21 +91,24 @@ if st.button("Generate Invoice"):
     doc.add_heading("TAX INVOICE", 0)
 
     doc.add_paragraph(f"Invoice No: {invoice_no}")
+    doc.add_paragraph(f"Date: {date}")
+
     doc.add_paragraph(f"Customer: {customer}")
+    doc.add_paragraph(f"Contact: {contact}")
+    doc.add_paragraph(f"GSTIN: {gstin}")
     doc.add_paragraph(f"Address: {address}")
 
-    table = doc.add_table(rows=2, cols=5)
-    table.rows[0].cells[0].text = "Item"
-    table.rows[0].cells[1].text = "Qty"
-    table.rows[0].cells[2].text = "Price"
-    table.rows[0].cells[3].text = "GST"
-    table.rows[0].cells[4].text = "Total"
+    table = doc.add_table(rows=2, cols=6)
 
-    table.rows[1].cells[0].text = item
-    table.rows[1].cells[1].text = str(qty)
-    table.rows[1].cells[2].text = str(price)
-    table.rows[1].cells[3].text = str(gst_amount)
-    table.rows[1].cells[4].text = str(total)
+    headers = ["Item","Qty","Price","Transport","GST","Total"]
+
+    for i,h in enumerate(headers):
+        table.rows[0].cells[i].text = h
+
+    values = [item,qty,price,transport,gst_amount,total]
+
+    for i,v in enumerate(values):
+        table.rows[1].cells[i].text = str(v)
 
     doc.save(word_file)
 
@@ -103,21 +119,27 @@ if st.button("Generate Invoice"):
     c = canvas.Canvas(pdf_file)
     c.setFont("Helvetica", 12)
 
-    c.drawString(200, 800, "TAX INVOICE")
+    c.drawString(200,800,"TAX INVOICE")
 
-    c.drawString(50, 750, f"Invoice No: {invoice_no}")
-    c.drawString(50, 730, f"Customer: {customer}")
-    c.drawString(50, 710, f"Item: {item}")
+    c.drawString(50,760,f"Invoice No: {invoice_no}")
+    c.drawString(50,740,f"Date: {date}")
 
-    c.drawString(50, 680, f"Qty: {qty}")
-    c.drawString(50, 660, f"Price: {price}")
+    c.drawString(50,710,f"Customer: {customer}")
+    c.drawString(50,690,f"Contact: {contact}")
+    c.drawString(50,670,f"GSTIN: {gstin}")
 
-    c.drawString(50, 640, f"GST: {gst_amount}")
-    c.drawString(50, 620, f"Total: {total}")
+    c.drawString(50,640,f"Item: {item}")
+    c.drawString(50,620,f"Quantity: {qty}")
+    c.drawString(50,600,f"Price: {price}")
+
+    c.drawString(50,580,f"Transport Rate: {transport}")
+
+    c.drawString(50,550,f"GST Amount: {gst_amount}")
+    c.drawString(50,530,f"Total Amount: {total}")
 
     c.save()
 
-    st.success("Invoice Created!")
+    st.success("Invoice Created Successfully!")
 
     # Download buttons
 
@@ -134,6 +156,6 @@ if st.button("Generate Invoice"):
 
 st.header("Invoice History")
 
-df = pd.read_sql("SELECT * FROM invoices", conn)
+history = pd.read_sql("SELECT * FROM invoices", conn)
 
-st.dataframe(df)
+st.dataframe(history)
