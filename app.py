@@ -57,10 +57,8 @@ def download_invoice(filename):
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-        pdf.output(pdf_path)
-        return (
-            f"<div style='text-align:center;margin-top:30px;'>"
+    pdf.output(pdf_path)
+    return (f"<div style='text-align:center;margin-top:30px;'>"
             f"<h2>Invoice generated!</h2>"
             f"<a href='/invoices/{data['invoice_number']}.xlsx' download>Download Excel</a> | "
             f"<a href='/invoices/{data['invoice_number']}.pdf' download>Download PDF</a>"
