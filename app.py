@@ -14,8 +14,10 @@ os.makedirs("invoices", exist_ok=True)
 conn = sqlite3.connect("invoice.db", check_same_thread=False)
 cursor = conn.cursor()
 
+# Create table safely
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS invoices(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
 invoice_no TEXT,
 customer TEXT,
 contact TEXT,
@@ -39,12 +41,12 @@ gstin = st.text_input("GSTIN")
 address = st.text_area("Customer Address")
 
 item = st.text_input("Item Description")
-qty = st.number_input("Quantity", 1)
-price = st.number_input("Price", 0.0)
+qty = st.number_input("Quantity", min_value=1)
+price = st.number_input("Price", min_value=0.0)
 
-transport = st.number_input("Transport Rate", 0.0)
+transport = st.number_input("Transport Rate", min_value=0.0)
 
-gst = st.number_input("GST %", 0.0)
+gst = st.number_input("GST %", min_value=0.0)
 
 # ---------------- CALCULATION ----------------
 
@@ -54,12 +56,15 @@ if st.button("Generate Invoice"):
     gst_amount = subtotal * gst / 100
     total = subtotal + gst_amount + transport
 
-    # Save history
-    cursor.execute(
-    "INSERT INTO invoices VALUES (?,?,?,?,?,?)",
-    (invoice_no, customer, contact, gstin, str(date), total)
-    )
-    conn.commit()
+    # Save history safely
+    try:
+        cursor.execute(
+            "INSERT INTO invoices (invoice_no, customer, contact, gstin, date, amount) VALUES (?,?,?,?,?,?)",
+            (invoice_no, customer, contact, gstin, str(date), total)
+        )
+        conn.commit()
+    except Exception as e:
+        st.error(f"Database Error: {e}")
 
     # ---------------- EXCEL ----------------
 
