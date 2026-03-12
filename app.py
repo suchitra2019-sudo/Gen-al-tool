@@ -4,6 +4,7 @@ import sqlite3
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
+from reportlab.platypus import Table, TableStyle
 from docx import Document
 import os
 
@@ -57,9 +58,13 @@ st.subheader(f"Invoice No: {invoice_no}")
 
 st.sidebar.header("Company Details")
 
-company_name = st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
+company_name = st.sidebar.text_input(
+"Company Name","SHIVKRUTI ENTERPRISES"
+)
 
-company_gst = st.sidebar.text_input("Company GSTIN","27CFKPP2024L1Z7")
+company_gst = st.sidebar.text_input(
+"Company GSTIN","27CFKPP2024L1Z7"
+)
 
 company_address = st.sidebar.text_area(
 "Company Address",
@@ -144,70 +149,127 @@ if st.button("Generate Invoice"):
 
     width,height = A4
 
+# ----- OUTER BORDER -----
+
+    c.rect(30,30,width-60,height-60)
+
+# ----- LOGO -----
+
     if os.path.exists("logo.png"):
-        c.drawImage("logo.png",40,height-90,width=80)
+        try:
+            c.drawImage("logo.png",40,height-100,width=80,preserveAspectRatio=True)
+        except:
+            pass
+
+# ----- COMPANY HEADER -----
 
     c.setFont("Helvetica-Bold",16)
     c.drawString(150,height-50,company_name)
 
     c.setFont("Helvetica",10)
     c.drawString(150,height-70,company_address)
-    c.drawString(150,height-90,f"GSTIN: {company_gst}")
+
+    c.drawString(150,height-85,f"GSTIN: {company_gst}")
 
     c.line(40,height-110,width-40,height-110)
 
+# ----- BILL DETAILS -----
+
     c.drawString(40,height-130,f"Invoice No: {invoice_no}")
-    c.drawString(300,height-130,f"Date: {date}")
+    c.drawString(350,height-130,f"Date: {date}")
 
     c.drawString(40,height-160,f"Bill To: {customer}")
     c.drawString(40,height-180,f"Contact: {contact}")
     c.drawString(40,height-200,f"GSTIN: {gstin}")
 
-# ----------- TABLE HEADER ------------
+# ---------------- TABLE ----------------
 
-    y = height-240
-
-    c.setFillColor(colors.lightblue)
-    c.rect(40,y,500,20,fill=True)
-
-    c.setFillColor(colors.black)
-
-    c.drawString(50,y+5,"Description")
-    c.drawString(300,y+5,"Qty")
-    c.drawString(350,y+5,"Price")
-    c.drawString(430,y+5,"Total")
-
-    y -= 25
-
-# ----------- ITEMS ------------
+    table_data = [["Description","Qty","Price","Total"]]
 
     for desc,qty,price in items:
+        table_data.append([
+        desc,
+        qty,
+        price,
+        qty*price
+        ])
 
-        line_total = qty*price
+    table = Table(table_data,colWidths=[250,70,80,100])
 
-        c.drawString(50,y,str(desc))
-        c.drawString(300,y,str(qty))
-        c.drawString(350,y,str(price))
-        c.drawString(430,y,str(line_total))
+    table.setStyle(TableStyle([
 
-        y -= 20
+    ("BACKGROUND",(0,0),(-1,0),colors.lightblue),
 
-# ----------- TOTALS ------------
+    ("GRID",(0,0),(-1,-1),1,colors.black),
 
-    y -= 20
+    ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
 
-    c.drawString(350,y,f"Subtotal: {subtotal}")
+    ("ALIGN",(1,1),(-1,-1),"CENTER")
 
-    y -= 20
-    c.drawString(350,y,f"GST: {gst_amount}")
+    ]))
 
-    y -= 20
-    c.drawString(350,y,f"Transport: {transport}")
+    table.wrapOn(c,width,height)
+    table.drawOn(c,40,height-380)
 
-    y -= 20
+# ---------------- GST SUMMARY ----------------
 
-    c.setFont("Helvetica-Bold",12)
-    c.drawString(350,y,f"Grand Total: {total}")
+    gst_table = [
+    ["GST Summary",""],
+    ["Taxable Amount",subtotal],
+    ["GST",gst_amount],
+    ["Transport",transport]
+    ]
+
+    gst = Table(gst_table,colWidths=[140,100])
+
+    gst.setStyle(TableStyle([
+    ("GRID",(0,0),(-1,-1),1,colors.black),
+    ("BACKGROUND",(0,0),(-1,0),colors.lightgrey)
+    ]))
+
+    gst.wrapOn(c,width,height)
+    gst.drawOn(c,40,height-500)
+
+# ---------------- TOTAL TABLE ----------------
+
+    total_table = [
+    ["Subtotal",subtotal],
+    ["GST",gst_amount],
+    ["Transport",transport],
+    ["Grand Total",total]
+    ]
+
+    totals = Table(total_table,colWidths=[140,120])
+
+    totals.setStyle(TableStyle([
+    ("GRID",(0,0),(-1,-1),1,colors.black),
+    ("FONTNAME",(0,-1),(-1,-1),"Helvetica-Bold")
+    ]))
+
+    totals.wrapOn(c,width,height)
+    totals.drawOn(c,350,height-500)
+
+# ---------------- GST DECLARATION ----------------
+
+    c.setFont("Helvetica",9)
+
+    c.drawString(
+    40,
+    120,
+    "GST Declaration: We declare that this invoice shows the actual price"
+    )
+
+    c.drawString(
+    40,
+    105,
+    "of the goods described and that all particulars are true and correct."
+    )
+
+# ---------------- SIGNATURE ----------------
+
+    c.drawString(400,100,f"For {company_name}")
+
+    c.drawString(400,70,"Authorized Signatory")
 
     c.save()
 
@@ -218,15 +280,16 @@ if st.button("Generate Invoice"):
     doc = Document()
 
     doc.add_heading(company_name)
+
     doc.add_paragraph(company_address)
+
     doc.add_paragraph(f"GSTIN: {company_gst}")
 
     doc.add_heading("TAX INVOICE")
 
     doc.add_paragraph(f"Invoice No: {invoice_no}")
-    doc.add_paragraph(f"Date: {date}")
 
-    doc.add_paragraph(f"Customer: {customer}")
+    doc.add_paragraph(f"Date: {date}")
 
     table = doc.add_table(rows=1,cols=4)
 
@@ -267,18 +330,30 @@ if st.button("Generate Invoice"):
 
     df.to_excel(excel_file,index=False)
 
-    st.success("Invoice Generated Successfully")
-
 # ---------------- DOWNLOAD ----------------
 
+    st.success("Invoice Generated Successfully")
+
     with open(pdf_file,"rb") as f:
-        st.download_button("Download PDF",f,file_name=f"invoice_{invoice_no}.pdf")
+        st.download_button(
+        "Download PDF",
+        f,
+        file_name=f"invoice_{invoice_no}.pdf"
+        )
 
     with open(word_file,"rb") as f:
-        st.download_button("Download Word",f,file_name=f"invoice_{invoice_no}.docx")
+        st.download_button(
+        "Download Word",
+        f,
+        file_name=f"invoice_{invoice_no}.docx"
+        )
 
     with open(excel_file,"rb") as f:
-        st.download_button("Download Excel",f,file_name=f"invoice_{invoice_no}.xlsx")
+        st.download_button(
+        "Download Excel",
+        f,
+        file_name=f"invoice_{invoice_no}.xlsx"
+        )
 
 # ---------------- HISTORY ----------------
 
