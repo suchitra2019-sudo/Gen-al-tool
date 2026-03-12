@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import pdfkit
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 from docx import Document
 import os
-from datetime import date
 
 st.set_page_config(page_title="Professional Invoice System")
 
@@ -45,7 +45,10 @@ conn.commit()
 cursor.execute("SELECT MAX(invoice_no) FROM invoices")
 result = cursor.fetchone()
 
-invoice_no = 1001 if result[0] is None else result[0] + 1
+if result[0] is None:
+    invoice_no = 1001
+else:
+    invoice_no = int(result[0]) + 1
 
 st.subheader(f"Invoice No: {invoice_no}")
 
@@ -53,22 +56,15 @@ st.subheader(f"Invoice No: {invoice_no}")
 
 st.sidebar.header("Company Details")
 
-company_name = st.sidebar.text_input(
-"Company Name","SHIVKRUTI ENTERPRISES"
-)
+company_name = st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
 
-company_gst = st.sidebar.text_input(
-"Company GSTIN","27CFKPP2024L1Z7"
-)
+company_gst = st.sidebar.text_input("Company GSTIN","27CFKPP2024L1Z7")
 
-company_address = st.sidebar.text_area(
-"Company Address",
-"HOUSE NO-301 VAJRESHWARI ROAD, AT,ZIDKE POST DIGASHI TAL.BHIWANDI, DIST.THANE"
-)
+company_address = st.sidebar.text_area("Company Address","HOUSE NO-301 VAJRESHWARI ROAD, AT,ZIDKE POST DIGASHI TAL.BHIWANDI, DIST.THANE")
 
 # ---------------- CUSTOMER DETAILS ----------------
 
-invoice_date = st.date_input("Invoice Date",date.today())
+date = st.date_input("Invoice Date")
 
 customer = st.text_input("Customer Name")
 
@@ -99,8 +95,7 @@ for i in range(int(num_items)):
     with col3:
         price = st.number_input(f"Price {i+1}",min_value=0.0)
 
-    if desc != "":
-        items.append((desc,qty,price))
+    items.append((desc,qty,price))
 
 transport = st.number_input("Transport Charges",0.0)
 
@@ -125,7 +120,7 @@ if st.button("Generate Invoice"):
 
     cursor.execute(
     "INSERT INTO invoices (invoice_no,customer,contact,gstin,date,total) VALUES (?,?,?,?,?,?)",
-    (invoice_no,customer,contact,gstin,str(invoice_date),total)
+    (invoice_no,customer,contact,gstin,str(date),total)
     )
 
     for desc,qty,price in items:
@@ -136,51 +131,69 @@ if st.button("Generate Invoice"):
 
     conn.commit()
 
-# ---------------- HTML TABLE ----------------
+# ---------------- PDF ----------------
 
-    rows = ""
+    pdf_file = f"invoices/invoice_{invoice_no}.pdf"
+
+    c = canvas.Canvas(pdf_file,pagesize=A4)
+
+    width,height = A4
+
+    if os.path.exists("logo.png"):
+        c.drawImage("logo.png",40,height-80,width=80)
+
+    c.setFont("Helvetica-Bold",16)
+    c.drawString(150,height-50,company_name)
+
+    c.setFont("Helvetica",11)
+    c.drawString(150,height-70,company_address)
+
+
+    
+    c.drawString(150,height-90,f"GSTIN: {company_gst}")
+
+    c.drawString(40,height-130,f"Invoice No: {invoice_no}")
+    c.drawString(40,height-150,f"Date: {date}")
+
+    c.drawString(40,height-180,f"Bill To: {customer}")
+    c.drawString(40,height-200,f"Contact: {contact}")
+    c.drawString(40,height-220,f"GSTIN: {gstin}")
+
+    y = height-260
+
+    c.drawString(40,y,"Description")
+    c.drawString(300,y,"Qty")
+    c.drawString(350,y,"Price")
+    c.drawString(420,y,"Total")
+
+    y -= 20
 
     for desc,qty,price in items:
 
         line_total = qty*price
 
-        rows += f"""
-        <tr>
-        <td>{desc}</td>
-        <td>{qty}</td>
-        <td>{price}</td>
-        <td>{line_total}</td>
-        </tr>
-        """
+        c.drawString(40,y,str(desc))
+        c.drawString(300,y,str(qty))
+        c.drawString(350,y,str(price))
+        c.drawString(420,y,str(line_total))
 
-# ---------------- LOAD HTML TEMPLATE ----------------
+        y -= 20
 
-    with open("templates/invoice_template.html") as f:
-        html = f.read()
+    y -= 20
 
-    html = html.replace("{{company_name}}",company_name)
-    html = html.replace("{{company_address}}",company_address)
-    html = html.replace("{{company_gst}}",company_gst)
+    c.drawString(350,y,f"Subtotal: {subtotal}")
 
-    html = html.replace("{{invoice_no}}",str(invoice_no))
-    html = html.replace("{{date}}",str(invoice_date))
+    y -= 20
+    c.drawString(350,y,f"GST: {gst_amount}")
 
-    html = html.replace("{{customer}}",customer)
-    html = html.replace("{{contact}}",contact)
-    html = html.replace("{{gstin}}",gstin)
+    y -= 20
+    c.drawString(350,y,f"Transport: {transport}")
 
-    html = html.replace("{{items}}",rows)
+    y -= 20
+    c.setFont("Helvetica-Bold",12)
+    c.drawString(350,y,f"Grand Total: {total}")
 
-    html = html.replace("{{subtotal}}",str(subtotal))
-    html = html.replace("{{gst}}",str(gst_amount))
-    html = html.replace("{{transport}}",str(transport))
-    html = html.replace("{{total}}",str(total))
-
-# ---------------- GENERATE PDF ----------------
-
-    pdf_file = f"invoices/invoice_{invoice_no}.pdf"
-
-    pdfkit.from_string(html,pdf_file)
+    c.save()
 
 # ---------------- WORD ----------------
 
@@ -189,13 +202,17 @@ if st.button("Generate Invoice"):
     doc = Document()
 
     doc.add_heading(company_name)
+
     doc.add_paragraph(company_address)
+
     doc.add_paragraph(f"GSTIN: {company_gst}")
 
     doc.add_heading("TAX INVOICE")
 
     doc.add_paragraph(f"Invoice No: {invoice_no}")
-    doc.add_paragraph(f"Date: {invoice_date}")
+    doc.add_paragraph(f"Date: {date}")
+
+    doc.add_paragraph(f"Customer: {customer}")
 
     table = doc.add_table(rows=1,cols=4)
 
@@ -217,15 +234,36 @@ if st.button("Generate Invoice"):
 
     doc.save(word_file)
 
-# ---------------- DOWNLOAD ----------------
+# ---------------- EXCEL ----------------
+
+    excel_file = f"invoices/invoice_{invoice_no}.xlsx"
+
+    df = pd.DataFrame(items,columns=["Description","Qty","Price"])
+
+    df["Total"] = df["Qty"] * df["Price"]
+
+    df.loc["Subtotal"] = ["","","",subtotal]
+
+    df.loc["GST"] = ["","","",gst_amount]
+
+    df.loc["Transport"] = ["","","",transport]
+
+    df.loc["Grand Total"] = ["","","",total]
+
+    df.to_excel(excel_file,index=False)
 
     st.success("Invoice Generated Successfully")
 
+# ---------------- DOWNLOAD ----------------
+
     with open(pdf_file,"rb") as f:
-        st.download_button("Download PDF",f,file_name=f"invoice_{invoice_no}.pdf")
+        st.download_button("Download PDF",f,file_name="invoice.pdf")
 
     with open(word_file,"rb") as f:
-        st.download_button("Download Word",f,file_name=f"invoice_{invoice_no}.docx")
+        st.download_button("Download Word",f,file_name="invoice.docx")
+
+    with open(excel_file,"rb") as f:
+        st.download_button("Download Excel",f,file_name="invoice.xlsx")
 
 # ---------------- HISTORY ----------------
 
