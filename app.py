@@ -3,6 +3,7 @@ import pandas as pd
 import sqlite3
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from reportlab.lib import colors
 from docx import Document
 import os
 
@@ -60,7 +61,10 @@ company_name = st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
 
 company_gst = st.sidebar.text_input("Company GSTIN","27CFKPP2024L1Z7")
 
-company_address = st.sidebar.text_area("Company Address","HOUSE NO-301 VAJRESHWARI ROAD, AT,ZIDKE POST DIGASHI TAL.BHIWANDI, DIST.THANE")
+company_address = st.sidebar.text_area(
+"Company Address",
+"HOUSE NO-301 VAJRESHWARI ROAD, AT,ZIDKE POST DIGASHI TAL.BHIWANDI, DIST.THANE"
+)
 
 # ---------------- CUSTOMER DETAILS ----------------
 
@@ -95,7 +99,8 @@ for i in range(int(num_items)):
     with col3:
         price = st.number_input(f"Price {i+1}",min_value=0.0)
 
-    items.append((desc,qty,price))
+    if desc != "":
+        items.append((desc,qty,price))
 
 transport = st.number_input("Transport Charges",0.0)
 
@@ -140,44 +145,54 @@ if st.button("Generate Invoice"):
     width,height = A4
 
     if os.path.exists("logo.png"):
-        c.drawImage("logo.png",40,height-80,width=80)
+        c.drawImage("logo.png",40,height-90,width=80)
 
     c.setFont("Helvetica-Bold",16)
     c.drawString(150,height-50,company_name)
 
-    c.setFont("Helvetica",11)
+    c.setFont("Helvetica",10)
     c.drawString(150,height-70,company_address)
-
-
-    
     c.drawString(150,height-90,f"GSTIN: {company_gst}")
 
+    c.line(40,height-110,width-40,height-110)
+
     c.drawString(40,height-130,f"Invoice No: {invoice_no}")
-    c.drawString(40,height-150,f"Date: {date}")
+    c.drawString(300,height-130,f"Date: {date}")
 
-    c.drawString(40,height-180,f"Bill To: {customer}")
-    c.drawString(40,height-200,f"Contact: {contact}")
-    c.drawString(40,height-220,f"GSTIN: {gstin}")
+    c.drawString(40,height-160,f"Bill To: {customer}")
+    c.drawString(40,height-180,f"Contact: {contact}")
+    c.drawString(40,height-200,f"GSTIN: {gstin}")
 
-    y = height-260
+# ----------- TABLE HEADER ------------
 
-    c.drawString(40,y,"Description")
-    c.drawString(300,y,"Qty")
-    c.drawString(350,y,"Price")
-    c.drawString(420,y,"Total")
+    y = height-240
 
-    y -= 20
+    c.setFillColor(colors.lightblue)
+    c.rect(40,y,500,20,fill=True)
+
+    c.setFillColor(colors.black)
+
+    c.drawString(50,y+5,"Description")
+    c.drawString(300,y+5,"Qty")
+    c.drawString(350,y+5,"Price")
+    c.drawString(430,y+5,"Total")
+
+    y -= 25
+
+# ----------- ITEMS ------------
 
     for desc,qty,price in items:
 
         line_total = qty*price
 
-        c.drawString(40,y,str(desc))
+        c.drawString(50,y,str(desc))
         c.drawString(300,y,str(qty))
         c.drawString(350,y,str(price))
-        c.drawString(420,y,str(line_total))
+        c.drawString(430,y,str(line_total))
 
         y -= 20
+
+# ----------- TOTALS ------------
 
     y -= 20
 
@@ -190,6 +205,7 @@ if st.button("Generate Invoice"):
     c.drawString(350,y,f"Transport: {transport}")
 
     y -= 20
+
     c.setFont("Helvetica-Bold",12)
     c.drawString(350,y,f"Grand Total: {total}")
 
@@ -202,9 +218,7 @@ if st.button("Generate Invoice"):
     doc = Document()
 
     doc.add_heading(company_name)
-
     doc.add_paragraph(company_address)
-
     doc.add_paragraph(f"GSTIN: {company_gst}")
 
     doc.add_heading("TAX INVOICE")
@@ -242,13 +256,14 @@ if st.button("Generate Invoice"):
 
     df["Total"] = df["Qty"] * df["Price"]
 
-    df.loc["Subtotal"] = ["","","",subtotal]
+    totals = pd.DataFrame({
+        "Description":["Subtotal","GST","Transport","Grand Total"],
+        "Qty":["","","",""],
+        "Price":["","","",""],
+        "Total":[subtotal,gst_amount,transport,total]
+    })
 
-    df.loc["GST"] = ["","","",gst_amount]
-
-    df.loc["Transport"] = ["","","",transport]
-
-    df.loc["Grand Total"] = ["","","",total]
+    df = pd.concat([df,totals])
 
     df.to_excel(excel_file,index=False)
 
@@ -257,13 +272,13 @@ if st.button("Generate Invoice"):
 # ---------------- DOWNLOAD ----------------
 
     with open(pdf_file,"rb") as f:
-        st.download_button("Download PDF",f,file_name="invoice.pdf")
+        st.download_button("Download PDF",f,file_name=f"invoice_{invoice_no}.pdf")
 
     with open(word_file,"rb") as f:
-        st.download_button("Download Word",f,file_name="invoice.docx")
+        st.download_button("Download Word",f,file_name=f"invoice_{invoice_no}.docx")
 
     with open(excel_file,"rb") as f:
-        st.download_button("Download Excel",f,file_name="invoice.xlsx")
+        st.download_button("Download Excel",f,file_name=f"invoice_{invoice_no}.xlsx")
 
 # ---------------- HISTORY ----------------
 
