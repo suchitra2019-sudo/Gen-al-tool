@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import pdfkit
+from xhtml2pdf import pisa
 from docx import Document
 import os
 from datetime import date
