@@ -5,78 +5,60 @@
 <style>
 
 body{
-font-family: Arial, Helvetica, sans-serif;
+font-family:Arial;
 padding:30px;
-background:#f2f2f2;
 }
 
 .invoice-box{
-background:white;
-padding:25px;
-border:2px solid #000;
+border:2px solid black;
+padding:20px;
 }
 
 .header{
-text-align:center;
-margin-bottom:20px;
-}
-
-.company{
-font-size:26px;
-font-weight:bold;
-}
-
-.address{
-font-size:13px;
-margin-top:5px;
-}
-
-.row{
 display:flex;
 justify-content:space-between;
-margin-top:20px;
 }
 
-.section{
-width:48%;
+.logo{
+width:80px;
 }
 
 table{
 width:100%;
 border-collapse:collapse;
-margin-top:15px;
+margin-top:20px;
 }
 
 th,td{
-border:1px solid #000;
+border:1px solid black;
 padding:8px;
-font-size:13px;
+text-align:center;
 }
 
 th{
-background:#e6f0ff;
+background:#dbe9ff;
 }
 
-.total-table{
+.summary{
+margin-top:30px;
 width:40%;
 float:right;
-margin-top:20px;
 }
 
 .gst-summary{
+margin-top:30px;
 width:40%;
-margin-top:20px;
+float:left;
 }
 
 .footer{
-margin-top:80px;
+margin-top:120px;
 font-size:12px;
 }
 
 .signature{
 float:right;
 margin-top:40px;
-text-align:center;
 }
 
 </style>
@@ -89,89 +71,115 @@ text-align:center;
 
 <div class="header">
 
-<div class="company">{{company_name}}</div>
-<div class="address">{{company_address}}</div>
-<div>GSTIN : {{company_gst}}</div>
-<h2>TAX INVOICE</h2>
-</div>
-<div class="row">
-
-<div class="section">
-<b>Bill To</b><br>
-{{customer}}<br>
-Contact : {{contact}}<br>
-GSTIN : {{gstin}}
+<div>
+<img src="logo.png" class="logo">
 </div>
 
-<div class="section">
-Invoice No : {{invoice_no}}<br>
+<div>
+<h2>{{company_name}}</h2>
+<p>{{company_address}}</p>
+<p>GSTIN : {{company_gst}}</p>
+</div>
+
+</div>
+
+<h2 style="text-align:center;">TAX INVOICE</h2>
+
+<p>
+Invoice No : {{invoice_no}} <br>
 Date : {{date}}
-</div>
-</div>
+</p>
+
+<p>
+Bill To : {{customer}} <br>
+Contact : {{contact}} <br>
+GSTIN : {{gstin}}
+</p>
+
 <table>
+
 <tr>
 <th>Description</th>
 <th>Qty</th>
 <th>Price</th>
 <th>Total</th>
 </tr>
+
 {{items}}
+
 </table>
 
-<div class="row">
 <div class="gst-summary">
+
 <table>
+
 <tr>
 <th colspan="2">GST Summary</th>
 </tr>
+
 <tr>
-<td>Taxable Amount</td>
+<td>Taxable</td>
 <td>{{subtotal}}</td>
 </tr>
+
 <tr>
 <td>GST</td>
 <td>{{gst}}</td>
 </tr>
+
 <tr>
 <td>Transport</td>
 <td>{{transport}}</td>
 </tr>
+
 </table>
+
 </div>
-<div class="total-table">
+
+<div class="summary">
+
 <table>
+
 <tr>
 <td>Subtotal</td>
 <td>{{subtotal}}</td>
 </tr>
+
 <tr>
 <td>GST</td>
 <td>{{gst}}</td>
 </tr>
+
 <tr>
 <td>Transport</td>
 <td>{{transport}}</td>
 </tr>
+
 <tr>
 <td><b>Grand Total</b></td>
 <td><b>{{total}}</b></td>
 </tr>
+
 </table>
 
 </div>
-</div>
 
 <div class="footer">
-<b>GST Declaration</b><br>
-We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.  
-GST shall be payable by the supplier under forward charge unless otherwise specified.
+
+<b>GST Declaration:</b>  
+We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
+
 </div>
 
 <div class="signature">
+
 For {{company_name}} <br><br><br>
+
 Authorized Signatory
+
 </div>
 
 </div>
+
 </body>
 </html>
