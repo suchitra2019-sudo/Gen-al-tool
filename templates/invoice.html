@@ -1,33 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GST Invoice</title>
-    <link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="static/style.css">
 </head>
+
 <body>
-    <div class="container">
-        <h1>GST Invoice Form</h1>
-        <form method="post" action="/generate">
-            <label>Invoice Number</label>
-            <input type="text" name="invoice_number" required>
-            <label>Date</label>
-            <input type="date" name="date" required>
-            <label>Customer Name 1</label>
-            <input type="text" name="customer_name" required>
-            <label>Customer Address</label>
-            <input type="text" name="customer_address" required>
-            <label>Item Description</label>
-            <input type="text" name="item_desc" required>
-            <label>Quantity</label>
-            <input type="number" name="quantity" min="1" required>
-            <label>Rate</label>
-            <input type="number" name="rate" min="0" step="0.01" required>
-            <label>GST (%)</label>
-            <input type="number" name="gst" min="0" step="0.01" required>
-            <button type="submit">Generate Invoice</button>
-        </form>
-    </div>
+
+<div class="invoice-box">
+
+<div class="invoice-header">
+
+<div>
+<div class="company-name">SA Enterprises</div>
+<div>GSTIN: 27XXXXX</div>
+</div>
+
+<div>
+<div class="invoice-title">TAX INVOICE</div>
+Invoice #: {{invoice_number}}<br>
+Date: {{date}}
+</div>
+
+</div>
+
+<div class="invoice-details">
+<b>Bill To</b><br>
+{{customer_name}}<br>
+{{customer_address}}
+</div>
+
+<table class="invoice-table">
+
+<tr>
+<th>Description</th>
+<th>Qty</th>
+<th>Rate</th>
+<th>Total</th>
+</tr>
+
+<tr>
+<td>{{item_desc}}</td>
+<td>{{quantity}}</td>
+<td>{{rate}}</td>
+<td>{{item_total}}</td>
+</tr>
+
+</table>
+
+<div class="total-section">
+
+<table>
+
+<tr>
+<td>Subtotal</td>
+<td>{{subtotal}}</td>
+</tr>
+
+<tr>
+<td>GST</td>
+<td>{{gst_amount}}</td>
+</tr>
+
+<tr>
+<td>Total</td>
+<td>{{grand_total}}</td>
+</tr>
+
+</table>
+
+</div>
+
+<div class="signature">
+Authorized Signature
+</div>
+
+</div>
+
 </body>
 </html>
