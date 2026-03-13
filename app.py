@@ -277,19 +277,17 @@ items,subtotal,cgst,sgst,transport,total):
 
 # ---------------- FOOTER ----------------
 
-    footer=Table([
-        ["Payment Terms: Due within 15 days","","Authorized Signature"],
-        ["Bank: ABC Bank","",""],
-        ["Account No: 1234567890","",""]
-    ],colWidths=[260,140,140])
+    elements.append(Spacer(1,40))
 
-    footer.setStyle(TableStyle([
-        ("GRID",(0,0),(-1,-1),1,colors.lightgrey)
-    ]))
+elements.append(Paragraph("Payment Terms: Due within 15 days", styles["Normal"]))
+elements.append(Paragraph("Bank: ABC Bank", styles["Normal"]))
+elements.append(Paragraph("Account No: 1234567890", styles["Normal"]))
 
-    elements.append(footer)
+elements.append(Spacer(1,30))
 
-    doc.build(elements)
+elements.append(Paragraph("<b>Authorized Signature</b>", styles["Normal"]))
+
+   
 
     buffer.seek(0)
 
