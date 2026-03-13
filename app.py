@@ -1,23 +1,41 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
+import streamlit.components.v1 as components
+from datetime import date
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 import os
-from datetime import date as dt_date
 
-st.set_page_config(page_title="GST Invoice System", layout="wide")
+st.set_page_config(page_title="GST Billing Software", layout="wide")
 
 # ---------------- DATABASE ----------------
 
-conn = sqlite3.connect("invoice.db", check_same_thread=False)
+conn = sqlite3.connect("billing.db", check_same_thread=False)
 cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS customers(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+name TEXT,
+contact TEXT,
+gstin TEXT
+)
+""")
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS products(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+name TEXT,
+price REAL
+)
+""")
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS invoices(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 invoice_no INTEGER,
 customer TEXT,
-contact TEXT,
-gstin TEXT,
 date TEXT,
 total REAL
 )
@@ -25,42 +43,33 @@ total REAL
 
 conn.commit()
 
-# ---------------- SESSION STATE ----------------
-
-if "customer" not in st.session_state:
-    st.session_state.customer=""
-
-if "contact" not in st.session_state:
-    st.session_state.contact=""
-
-if "gstin" not in st.session_state:
-    st.session_state.gstin=""
-
-if "date" not in st.session_state:
-    st.session_state.date=dt_date.today()
-
 # ---------------- SIDEBAR ----------------
 
-st.sidebar.title("Navigation")
+st.sidebar.title("Billing Menu")
 
 page = st.sidebar.radio(
-"Select Page",
-["Create Invoice","Invoice History"]
+"Navigation",
+[
+"Create Invoice",
+"Invoice History",
+"Customer Master",
+"Product Master"
+]
 )
 
-# =====================================================
-# FUNCTION : INVOICE HTML
-# =====================================================
+# ====================================================
+# INVOICE HTML TEMPLATE
+# ====================================================
 
-def generate_invoice_html(company_name,company_address,company_gst,
-invoice_no,date,customer,contact,gstin,items,
-subtotal,gst_amount,transport,total):
+def generate_invoice_html(company, address, gst, invoice_no,
+date, customer, contact, gstin,
+items, subtotal, cgst, sgst, transport, total):
 
-    rows_html=""
+    rows = ""
 
-    for desc,qty,price in items:
+    for desc, qty, price in items:
 
-        rows_html += f"""
+        rows += f"""
         <tr>
         <td>{desc}</td>
         <td>{qty}</td>
@@ -69,294 +78,312 @@ subtotal,gst_amount,transport,total):
         </tr>
         """
 
-    html=f"""
-<style>
+    html = f"""
 
-.invoice-box {{
-width:800px;
-margin:auto;
-padding:20px;
-border:1px solid #ddd;
-font-family:Arial;
-background:white;
-}}
+    <style>
 
-.header {{
-display:flex;
-justify-content:space-between;
-}}
+    body {{
+    font-family: Arial;
+    }}
 
-.company {{
-font-size:22px;
-font-weight:bold;
-}}
+    .invoice {{
+    width:800px;
+    margin:auto;
+    padding:20px;
+    border:1px solid #ddd;
+    }}
 
-table {{
-width:100%;
-border-collapse:collapse;
-margin-top:20px;
-}}
+    table {{
+    width:100%;
+    border-collapse:collapse;
+    }}
 
-table, th, td {{
-border:1px solid #ccc;
-}}
+    th,td {{
+    border:1px solid #ccc;
+    padding:8px;
+    text-align:left;
+    }}
 
-th, td {{
-padding:8px;
-text-align:left;
-}}
+    .total {{
+    font-weight:bold;
+    }}
 
-.total {{
-font-weight:bold;
-}}
+    </style>
 
-</style>
+    <div class="invoice">
 
-<div class="invoice-box">
+    <h2>{company}</h2>
+    {address}<br>
+    GSTIN : {gst}
 
-<div class="header">
+    <hr>
 
-<div>
-<div class="company">{company_name}</div>
-<div>{company_address}</div>
-<div>GSTIN : {company_gst}</div>
-</div>
+    <h3>TAX INVOICE</h3>
 
-<div>
-<h3>TAX INVOICE</h3>
-Invoice No : {invoice_no}<br>
-Date : {date}
-</div>
+    Invoice No : {invoice_no}<br>
+    Date : {date}
 
-</div>
+    <br>
 
-<hr>
+    <b>Bill To</b><br>
+    {customer}<br>
+    Contact : {contact}<br>
+    GSTIN : {gstin}
 
-<b>Bill To</b><br>
-{customer}<br>
-Contact : {contact}<br>
-GSTIN : {gstin}
+    <table>
 
-<table>
+    <tr>
+    <th>Description</th>
+    <th>Qty</th>
+    <th>Price</th>
+    <th>Total</th>
+    </tr>
 
-<tr>
-<th>Description</th>
-<th>Qty</th>
-<th>Price</th>
-<th>Total</th>
-</tr>
+    {rows}
 
-{rows_html}
+    <tr class="total">
+    <td colspan="3">Subtotal</td>
+    <td>{subtotal}</td>
+    </tr>
 
-<tr class="total">
-<td colspan="3">Subtotal</td>
-<td>{subtotal}</td>
-</tr>
+    <tr class="total">
+    <td colspan="3">CGST</td>
+    <td>{cgst}</td>
+    </tr>
 
-<tr class="total">
-<td colspan="3">GST</td>
-<td>{gst_amount}</td>
-</tr>
+    <tr class="total">
+    <td colspan="3">SGST</td>
+    <td>{sgst}</td>
+    </tr>
 
-<tr class="total">
-<td colspan="3">Transport</td>
-<td>{transport}</td>
-</tr>
+    <tr class="total">
+    <td colspan="3">Transport</td>
+    <td>{transport}</td>
+    </tr>
 
-<tr class="total">
-<td colspan="3">Grand Total</td>
-<td>{total}</td>
-</tr>
+    <tr class="total">
+    <td colspan="3">Grand Total</td>
+    <td>{total}</td>
+    </tr>
 
-</table>
+    </table>
 
-<br>
+    <br>
 
-<button onclick="window.print()">Print Invoice</button>
+    <button onclick="window.print()">Print Invoice</button>
 
-</div>
-"""
+    </div>
+
+    """
 
     return html
 
-# =====================================================
-# CREATE INVOICE PAGE
-# =====================================================
 
-if page=="Create Invoice":
+# ====================================================
+# CREATE INVOICE
+# ====================================================
 
-    st.title("GST Professional Invoice Generator")
+if page == "Create Invoice":
+
+    st.title("GST Invoice Generator")
 
     cursor.execute("SELECT MAX(invoice_no) FROM invoices")
-    result=cursor.fetchone()
+    result = cursor.fetchone()
 
-    invoice_no=1001 if result[0] is None else int(result[0])+1
+    invoice_no = 1001 if result[0] is None else result[0] + 1
 
     st.subheader(f"Invoice No : {invoice_no}")
 
-    # COMPANY
+    # Company
 
-    st.sidebar.header("Company Details")
+    st.sidebar.header("Company")
 
-    company_name=st.sidebar.text_input(
-    "Company Name","SHIVKRUTI ENTERPRISES")
+    company = st.sidebar.text_input("Company Name","My Company")
 
-    company_gst=st.sidebar.text_input(
-    "Company GSTIN","27CFKPP2024L1Z7")
+    address = st.sidebar.text_area("Address","Mumbai")
 
-    company_address=st.sidebar.text_area(
-    "Company Address",
-    "HOUSE NO-301 VAJRESHWARI ROAD, BHIWANDI"
-    )
+    gst = st.sidebar.text_input("GSTIN","27ABCDE1234F1Z5")
 
-    # CUSTOMER
+    # Customer
 
-    col1,col2=st.columns(2)
+    customers = pd.read_sql("SELECT * FROM customers",conn)
 
-    with col1:
+    if not customers.empty:
 
-        date=st.date_input(
-        "Invoice Date",
-        value=st.session_state.date
+        customer_name = st.selectbox(
+        "Select Customer",
+        customers["name"]
         )
 
-        customer=st.text_input(
-        "Customer Name",
-        value=st.session_state.customer
-        )
+        cust = customers[customers["name"]==customer_name].iloc[0]
 
-    with col2:
+        contact = cust["contact"]
+        gstin = cust["gstin"]
 
-        contact=st.text_input(
-        "Contact",
-        value=st.session_state.contact
-        )
+    else:
 
-        gstin=st.text_input(
-        "Customer GSTIN",
-        value=st.session_state.gstin
-        )
+        customer_name = st.text_input("Customer")
+        contact = st.text_input("Contact")
+        gstin = st.text_input("GSTIN")
 
-    # ITEMS
+    invoice_date = st.date_input("Invoice Date", date.today())
 
-    st.subheader("Invoice Items")
+    # Products
 
-    items=[]
+    st.subheader("Items")
 
-    num_items=st.number_input("Number of Items",1,10,1)
+    products = pd.read_sql("SELECT * FROM products",conn)
 
-    for i in range(int(num_items)):
+    items = []
 
-        c1,c2,c3=st.columns(3)
+    rows = st.number_input("Number of Items",1,10,1)
+
+    for i in range(int(rows)):
+
+        c1,c2,c3 = st.columns(3)
 
         with c1:
-            desc=st.text_input(f"Description {i+1}")
+
+            if not products.empty:
+
+                product = st.selectbox(
+                f"Product {i+1}",
+                products["name"],
+                key=f"p{i}"
+                )
+
+                price = products[
+                products["name"]==product
+                ]["price"].values[0]
+
+            else:
+
+                product = st.text_input(f"Item {i+1}")
+                price = st.number_input(f"Price {i+1}")
 
         with c2:
-            qty=st.number_input(f"Qty {i+1}",min_value=1)
+            qty = st.number_input(f"Qty {i+1}",1)
 
         with c3:
-            price=st.number_input(f"Price {i+1}",min_value=0.0)
+            st.write("Price :",price)
 
-        items.append((desc,qty,price))
+        items.append((product,qty,price))
 
-    transport=st.number_input("Transport Charges",0.0)
+    transport = st.number_input("Transport",0.0)
 
-    gst_rate=st.number_input("GST %",18.0)
+    # Calculation
 
-    subtotal=sum(q*p for _,q,p in items)
-    gst_amount=subtotal*gst_rate/100
-    total=subtotal+gst_amount+transport
+    subtotal = sum(q*p for _,q,p in items)
+
+    cgst = subtotal * 0.09
+    sgst = subtotal * 0.09
+
+    total = subtotal + cgst + sgst + transport
 
     st.write("Subtotal :",subtotal)
-    st.write("GST :",gst_amount)
-    st.write("Grand Total :",total)
+    st.write("CGST :",cgst)
+    st.write("SGST :",sgst)
+    st.write("Total :",total)
 
-    # PREVIEW
+    # Preview
 
     st.subheader("Invoice Preview")
 
-    preview=st.toggle("Show Invoice Preview")
+    if st.toggle("Show Preview"):
 
-    if preview:
-
-        invoice_html=generate_invoice_html(
-        company_name,
-        company_address,
-        company_gst,
-        invoice_no,
-        date,
-        customer,
-        contact,
-        gstin,
-        items,
-        subtotal,
-        gst_amount,
-        transport,
-        total
+        html = generate_invoice_html(
+        company,address,gst,invoice_no,
+        invoice_date,customer_name,contact,gstin,
+        items,subtotal,cgst,sgst,transport,total
         )
 
-        st.markdown(invoice_html,unsafe_allow_html=True)
+        components.html(html,height=900)
 
-    # SAVE
+    # Save
 
     if st.button("Generate Invoice"):
 
         cursor.execute(
-        "INSERT INTO invoices (invoice_no,customer,contact,gstin,date,total) VALUES (?,?,?,?,?,?)",
-        (invoice_no,customer,contact,gstin,str(date),total)
+        "INSERT INTO invoices (invoice_no,customer,date,total) VALUES (?,?,?,?)",
+        (invoice_no,customer_name,str(invoice_date),total)
         )
 
         conn.commit()
 
-        st.success("Invoice Created Successfully")
+        st.success("Invoice Created")
 
-# =====================================================
-# HISTORY PAGE
-# =====================================================
+# ====================================================
+# CUSTOMER MASTER
+# ====================================================
 
-elif page=="Invoice History":
+elif page == "Customer Master":
+
+    st.title("Customer Master")
+
+    name = st.text_input("Customer Name")
+    contact = st.text_input("Contact")
+    gst = st.text_input("GSTIN")
+
+    if st.button("Add Customer"):
+
+        cursor.execute(
+        "INSERT INTO customers (name,contact,gstin) VALUES (?,?,?)",
+        (name,contact,gst)
+        )
+
+        conn.commit()
+
+        st.success("Customer Added")
+
+    df = pd.read_sql("SELECT * FROM customers",conn)
+    st.dataframe(df)
+
+# ====================================================
+# PRODUCT MASTER
+# ====================================================
+
+elif page == "Product Master":
+
+    st.title("Product Master")
+
+    name = st.text_input("Product Name")
+    price = st.number_input("Price")
+
+    if st.button("Add Product"):
+
+        cursor.execute(
+        "INSERT INTO products (name,price) VALUES (?,?)",
+        (name,price)
+        )
+
+        conn.commit()
+
+        st.success("Product Added")
+
+    df = pd.read_sql("SELECT * FROM products",conn)
+    st.dataframe(df)
+
+# ====================================================
+# HISTORY
+# ====================================================
+
+elif page == "Invoice History":
 
     st.title("Invoice History")
 
-    df=pd.read_sql("SELECT * FROM invoices",conn)
+    df = pd.read_sql("SELECT * FROM invoices",conn)
 
-    if df.empty:
+    st.dataframe(df)
 
-        st.info("No invoices found")
-
-    else:
-
-        st.dataframe(df,use_container_width=True)
-
-        selected_invoice=st.selectbox(
-        "Select Invoice",
-        df["invoice_no"]
-        )
-
-        if st.button("Load Invoice"):
-
-            row=df[df.invoice_no==selected_invoice].iloc[0]
-
-            st.session_state.customer=row["customer"]
-            st.session_state.contact=row["contact"]
-            st.session_state.gstin=row["gstin"]
-            st.session_state.date=pd.to_datetime(row["date"]).date()
-
-            st.success("Invoice Loaded. Go to Create Invoice page.")
-
-    # DELETE
-
-    st.subheader("Delete Invoice")
-
-    delete_id=st.number_input("Enter Invoice Number",step=1)
+    delete_id = st.number_input("Invoice Number to Delete")
 
     if st.button("Delete Invoice"):
 
         cursor.execute(
-        "DELETE FROM invoices WHERE invoice_no=?",(delete_id,)
+        "DELETE FROM invoices WHERE invoice_no=?",
+        (delete_id,)
         )
 
         conn.commit()
 
-        st.warning("Invoice Deleted")
+        st.success("Invoice Deleted")
