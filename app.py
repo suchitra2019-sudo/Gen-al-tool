@@ -3,19 +3,12 @@ import pandas as pd
 import sqlite3
 import os
 from datetime import date as dt_date
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from docx import Document
 
-st.set_page_config(page_title="Professional Invoice System", layout="wide")
-
-st.title("GST Professional Invoice Generator")
-
-os.makedirs("invoices", exist_ok=True)
+st.set_page_config(page_title="Professional Invoice System",layout="wide")
 
 # ---------------- DATABASE ----------------
 
-conn = sqlite3.connect("invoice.db", check_same_thread=False)
+conn = sqlite3.connect("invoice.db",check_same_thread=False)
 cursor = conn.cursor()
 
 cursor.execute("""
@@ -41,122 +34,134 @@ price REAL
 
 conn.commit()
 
-# ---------------- SESSION STATE SAFE INIT ----------------
+# ---------------- SESSION STATE ----------------
 
 if "customer" not in st.session_state:
-    st.session_state.customer = ""
+    st.session_state.customer=""
 
 if "contact" not in st.session_state:
-    st.session_state.contact = ""
+    st.session_state.contact=""
 
 if "gstin" not in st.session_state:
-    st.session_state.gstin = ""
+    st.session_state.gstin=""
 
 if "date" not in st.session_state:
-    st.session_state.date = dt_date.today()
+    st.session_state.date=dt_date.today()
 
 if "selected_invoice" not in st.session_state:
-    st.session_state.selected_invoice = None
+    st.session_state.selected_invoice=None
 
-# ---------------- AUTO INVOICE NUMBER ----------------
+# ---------------- SIDEBAR NAVIGATION ----------------
 
-cursor.execute("SELECT MAX(invoice_no) FROM invoices")
-result = cursor.fetchone()
+st.sidebar.title("Navigation")
 
-invoice_no = 1001 if result[0] is None else int(result[0]) + 1
-
-st.subheader(f"Invoice No: {invoice_no}")
-
-# ---------------- COMPANY DETAILS ----------------
-
-st.sidebar.header("Company Details")
-
-company_name = st.sidebar.text_input(
-"Company Name","SHIVKRUTI ENTERPRISES")
-
-company_gst = st.sidebar.text_input(
-"Company GSTIN","27CFKPP2024L1Z7")
-
-company_address = st.sidebar.text_area(
-"Company Address",
-"HOUSE NO-301 VAJRESHWARI ROAD, AT,ZIDKE POST DIGASHI TAL.BHIWANDI, DIST.THANE"
+page = st.sidebar.radio(
+"Select Page",
+["Create Invoice","Invoice History"]
 )
 
-# ---------------- CUSTOMER DETAILS ----------------
+# =====================================================
+# CREATE INVOICE PAGE
+# =====================================================
 
-col1, col2 = st.columns(2)
+if page == "Create Invoice":
 
-with col1:
+    st.title("GST Professional Invoice Generator")
 
-    date = st.date_input(
-    "Invoice Date",
-    value=st.session_state.date
+    os.makedirs("invoices",exist_ok=True)
+
+    cursor.execute("SELECT MAX(invoice_no) FROM invoices")
+    result=cursor.fetchone()
+
+    invoice_no=1001 if result[0] is None else int(result[0])+1
+
+    st.subheader(f"Invoice No : {invoice_no}")
+
+    # ---------------- COMPANY ----------------
+
+    st.sidebar.header("Company Details")
+
+    company_name=st.sidebar.text_input(
+    "Company Name","SHIVKRUTI ENTERPRISES")
+
+    company_gst=st.sidebar.text_input(
+    "Company GSTIN","27CFKPP2024L1Z7")
+
+    company_address=st.sidebar.text_area(
+    "Company Address",
+    "HOUSE NO-301 VAJRESHWARI ROAD, BHIWANDI"
     )
 
-    customer = st.text_input(
-    "Customer Name",
-    value=st.session_state.customer
-    )
+    # ---------------- CUSTOMER ----------------
 
-with col2:
+    col1,col2=st.columns(2)
 
-    contact = st.text_input(
-    "Contact",
-    value=st.session_state.contact
-    )
+    with col1:
 
-    gstin = st.text_input(
-    "Customer GSTIN",
-    value=st.session_state.gstin
-    )
+        date=st.date_input(
+        "Invoice Date",
+        value=st.session_state.date
+        )
 
-address = st.text_area("Customer Address")
+        customer=st.text_input(
+        "Customer Name",
+        value=st.session_state.customer
+        )
 
-# ---------------- ITEMS ----------------
+    with col2:
 
-st.subheader("Invoice Items")
+        contact=st.text_input(
+        "Contact",
+        value=st.session_state.contact
+        )
 
-items=[]
+        gstin=st.text_input(
+        "Customer GSTIN",
+        value=st.session_state.gstin
+        )
 
-num_items=st.number_input("Number of Items",1,10,1)
+    address=st.text_area("Customer Address")
 
-for i in range(int(num_items)):
+    # ---------------- ITEMS ----------------
 
-    c1,c2,c3=st.columns(3)
+    st.subheader("Invoice Items")
 
-    with c1:
-        desc=st.text_input(f"Description {i+1}")
+    items=[]
 
-    with c2:
-        qty=st.number_input(f"Qty {i+1}",min_value=1)
+    num_items=st.number_input("Number of Items",1,10,1)
 
-    with c3:
-        price=st.number_input(f"Price {i+1}",min_value=0.0)
+    for i in range(int(num_items)):
 
-    items.append((desc,qty,price))
+        c1,c2,c3=st.columns(3)
 
-transport=st.number_input("Transport Charges",0.0)
+        with c1:
+            desc=st.text_input(f"Description {i+1}")
 
-gst_rate=st.number_input("GST %",18.0)
+        with c2:
+            qty=st.number_input(f"Qty {i+1}",min_value=1)
 
-# ---------------- CALCULATIONS ----------------
+        with c3:
+            price=st.number_input(f"Price {i+1}",min_value=0.0)
 
-subtotal=sum(q*p for _,q,p in items)
+        items.append((desc,qty,price))
 
-gst_amount=subtotal*gst_rate/100
+    transport=st.number_input("Transport Charges",0.0)
 
-total=subtotal+gst_amount+transport
+    gst_rate=st.number_input("GST %",18.0)
 
-st.write("Subtotal:",subtotal)
-st.write("GST:",gst_amount)
-st.write("Transport:",transport)
-st.write("Grand Total:",total)
+    # ---------------- CALCULATIONS ----------------
 
-# ---------------- GENERATE / UPDATE ----------------
+    subtotal=sum(q*p for _,q,p in items)
 
-col1,col2=st.columns(2)
+    gst_amount=subtotal*gst_rate/100
 
-with col1:
+    total=subtotal+gst_amount+transport
+
+    st.write("Subtotal:",subtotal)
+    st.write("GST:",gst_amount)
+    st.write("Grand Total:",total)
+
+    # ---------------- GENERATE ----------------
 
     if st.button("Generate Invoice"):
 
@@ -165,196 +170,68 @@ with col1:
         (invoice_no,customer,contact,gstin,str(date),total)
         )
 
-        for desc,qty,price in items:
+        conn.commit()
 
-            cursor.execute(
-            "INSERT INTO invoice_items VALUES (?,?,?,?)",
-            (invoice_no,desc,qty,price)
-            )
+        st.success("Invoice Generated")
+
+# =====================================================
+# INVOICE HISTORY PAGE
+# =====================================================
+
+elif page == "Invoice History":
+
+    st.title("Invoice History")
+
+    df=pd.read_sql("SELECT * FROM invoices",conn)
+
+    if df.empty:
+
+        st.info("No invoices found")
+
+    else:
+
+        selected=st.data_editor(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        key="history"
+        )
+
+        if st.session_state.history:
+
+            try:
+
+                row_index=list(st.session_state.history["edited_rows"].keys())[0]
+
+                row=df.iloc[row_index]
+
+                st.session_state.selected_invoice=row["invoice_no"]
+                st.session_state.customer=row["customer"]
+                st.session_state.contact=row["contact"]
+                st.session_state.gstin=row["gstin"]
+                st.session_state.date=pd.to_datetime(row["date"]).date()
+
+                st.success("Invoice loaded. Go to 'Create Invoice' page.")
+
+            except:
+                pass
+
+    # ---------------- DELETE ----------------
+
+    st.subheader("Delete Invoice")
+
+    delete_id=st.number_input("Enter Invoice Number",step=1)
+
+    if st.button("Delete Invoice"):
+
+        cursor.execute(
+        "DELETE FROM invoices WHERE invoice_no=?",(delete_id,)
+        )
+
+        cursor.execute(
+        "DELETE FROM invoice_items WHERE invoice_no=?",(delete_id,)
+        )
 
         conn.commit()
 
-        st.success("Invoice Generated Successfully")
-
-with col2:
-
-    if st.button("Update Selected Invoice"):
-
-        if st.session_state.selected_invoice:
-
-            cursor.execute(
-            """UPDATE invoices
-            SET customer=?,contact=?,gstin=?,date=?,total=?
-            WHERE invoice_no=?""",
-            (customer,contact,gstin,str(date),total,
-            st.session_state.selected_invoice)
-            )
-
-            conn.commit()
-
-            st.success("Invoice Updated")
-
-# ---------------- PROFESSIONAL HTML INVOICE ----------------
-
-st.subheader("Invoice Preview")
-
-html=f"""
-<style>
-.invoice-box {{
-width:800px;
-margin:auto;
-border:1px solid #eee;
-padding:30px;
-font-family:Arial;
-}}
-.header {{
-display:flex;
-justify-content:space-between;
-}}
-.company {{
-font-size:22px;
-font-weight:bold;
-}}
-table {{
-width:100%;
-border-collapse:collapse;
-margin-top:20px;
-}}
-table,th,td {{
-border:1px solid #ccc;
-}}
-th,td {{
-padding:8px;
-}}
-.total {{
-text-align:right;
-font-weight:bold;
-}}
-</style>
-
-<div class="invoice-box">
-
-<div class="header">
-
-<div>
-<div class="company">{company_name}</div>
-<div>{company_address}</div>
-<div>GSTIN: {company_gst}</div>
-</div>
-
-<div>
-<h3>INVOICE</h3>
-Invoice No: {invoice_no}<br>
-Date: {date}
-</div>
-
-</div>
-
-<hr>
-
-<b>Bill To</b><br>
-{customer}<br>
-{contact}<br>
-GSTIN: {gstin}
-
-<table>
-
-<tr>
-<th>Description</th>
-<th>Qty</th>
-<th>Price</th>
-<th>Total</th>
-</tr>
-"""
-
-for desc,qty,price in items:
-
-    html+=f"""
-<tr>
-<td>{desc}</td>
-<td>{qty}</td>
-<td>{price}</td>
-<td>{qty*price}</td>
-</tr>
-"""
-
-html+=f"""
-<tr>
-<td colspan="3" class="total">Subtotal</td>
-<td>{subtotal}</td>
-</tr>
-
-<tr>
-<td colspan="3" class="total">GST</td>
-<td>{gst_amount}</td>
-</tr>
-
-<tr>
-<td colspan="3" class="total">Transport</td>
-<td>{transport}</td>
-</tr>
-
-<tr>
-<td colspan="3" class="total">Grand Total</td>
-<td>{total}</td>
-</tr>
-
-</table>
-</div>
-"""
-
-st.markdown(html, unsafe_allow_html=True)
-
-# ---------------- HISTORY TABLE ----------------
-
-st.header("Invoice History")
-
-df=pd.read_sql("SELECT * FROM invoices",conn)
-
-if not df.empty:
-
-    event=st.data_editor(
-    df,
-    key="history_table",
-    use_container_width=True,
-    hide_index=True
-    )
-
-    if st.session_state.history_table:
-
-        try:
-
-            selected_index=list(st.session_state.history_table["edited_rows"].keys())[0]
-
-            row=df.iloc[selected_index]
-
-            st.session_state.selected_invoice=row["invoice_no"]
-            st.session_state.customer=row["customer"]
-            st.session_state.contact=row["contact"]
-            st.session_state.gstin=row["gstin"]
-            st.session_state.date=pd.to_datetime(row["date"]).date()
-
-            st.rerun()
-
-        except:
-            pass
-
-# ---------------- DELETE ----------------
-
-st.subheader("Delete Invoice")
-
-delete_id=st.number_input("Enter Invoice Number",step=1)
-
-if st.button("Delete Invoice"):
-
-    cursor.execute(
-    "DELETE FROM invoices WHERE invoice_no=?",(delete_id,)
-    )
-
-    cursor.execute(
-    "DELETE FROM invoice_items WHERE invoice_no=?",(delete_id,)
-    )
-
-    conn.commit()
-
-    st.warning("Invoice Deleted")
+        st.warning("Invoice Deleted")
