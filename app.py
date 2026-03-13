@@ -277,16 +277,23 @@ items,subtotal,cgst,sgst,transport,total):
 
 # ---------------- FOOTER ----------------
 
-    elements.append(Spacer(1,40))
+elements.append(Spacer(1,40))
 
-elements.append(Paragraph("Payment Terms: Due within 15 days", styles["Normal"]))
-elements.append(Paragraph("Bank: ABC Bank", styles["Normal"]))
-elements.append(Paragraph("Account No: 1234567890", styles["Normal"]))
+    elements.append(Paragraph("Payment Terms: Due within 15 days", styles["Normal"]))
+    elements.append(Paragraph("Bank: ABC Bank", styles["Normal"]))
+    elements.append(Paragraph("Account No: 1234567890", styles["Normal"]))
 
-elements.append(Spacer(1,30))
+    elements.append(Spacer(1,30))
 
-elements.append(Paragraph("<b>Authorized Signature</b>", styles["Normal"]))
+    elements.append(Paragraph("<b>Authorized Signature</b>", styles["Normal"]))
 
+# ---------------- BUILD PDF ----------------
+
+    doc.build(elements)
+
+    buffer.seek(0)
+
+    return buffer
 
 # ====================================================
 # CREATE INVOICE
