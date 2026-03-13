@@ -40,6 +40,20 @@ price REAL
 
 conn.commit()
 
+# ---------------- SESSION STATE ----------------
+
+if "customer" not in st.session_state:
+    st.session_state.customer = ""
+
+if "contact" not in st.session_state:
+    st.session_state.contact = ""
+
+if "gstin" not in st.session_state:
+    st.session_state.gstin = ""
+
+if "date" not in st.session_state:
+    st.session_state.date = None
+
 # ---------------- AUTO INVOICE NUMBER ----------------
 
 cursor.execute("SELECT MAX(invoice_no) FROM invoices")
@@ -60,17 +74,20 @@ company_name = st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
 
 company_gst = st.sidebar.text_input("Company GSTIN","27CFKPP2024L1Z7")
 
-company_address = st.sidebar.text_area("Company Address","HOUSE NO-301 VAJRESHWARI ROAD, AT,ZIDKE POST DIGASHI TAL.BHIWANDI, DIST.THANE")
+company_address = st.sidebar.text_area(
+"Company Address",
+"HOUSE NO-301 VAJRESHWARI ROAD, AT,ZIDKE POST DIGASHI TAL.BHIWANDI, DIST.THANE"
+)
 
 # ---------------- CUSTOMER DETAILS ----------------
 
-date = st.date_input("Invoice Date")
+date = st.date_input("Invoice Date", value=st.session_state.date)
 
-customer = st.text_input("Customer Name")
+customer = st.text_input("Customer Name", value=st.session_state.customer)
 
-contact = st.text_input("Contact Number")
+contact = st.text_input("Contact Number", value=st.session_state.contact)
 
-gstin = st.text_input("Customer GSTIN")
+gstin = st.text_input("Customer GSTIN", value=st.session_state.gstin)
 
 address = st.text_area("Customer Address")
 
@@ -139,17 +156,12 @@ if st.button("Generate Invoice"):
 
     width,height = A4
 
-    if os.path.exists("logo.png"):
-        c.drawImage("logo.png",40,height-80,width=80)
-
     c.setFont("Helvetica-Bold",16)
     c.drawString(150,height-50,company_name)
 
     c.setFont("Helvetica",11)
     c.drawString(150,height-70,company_address)
 
-
-    
     c.drawString(150,height-90,f"GSTIN: {company_gst}")
 
     c.drawString(40,height-130,f"Invoice No: {invoice_no}")
@@ -243,11 +255,8 @@ if st.button("Generate Invoice"):
     df["Total"] = df["Qty"] * df["Price"]
 
     df.loc["Subtotal"] = ["","","",subtotal]
-
     df.loc["GST"] = ["","","",gst_amount]
-
     df.loc["Transport"] = ["","","",transport]
-
     df.loc["Grand Total"] = ["","","",total]
 
     df.to_excel(excel_file,index=False)
@@ -269,6 +278,29 @@ if st.button("Generate Invoice"):
 
 st.header("Invoice History")
 
-df = pd.read_sql("SELECT * FROM invoices",conn)
+history_df = pd.read_sql("SELECT * FROM invoices",conn)
 
-st.dataframe(df)
+st.dataframe(history_df)
+
+if not history_df.empty:
+
+    selected_invoice = st.selectbox(
+        "Select Invoice Number to Copy",
+        history_df["invoice_no"]
+    )
+
+    if st.button("Load Invoice Data"):
+
+        cursor.execute(
+        "SELECT customer,contact,gstin,date FROM invoices WHERE invoice_no=?",
+        (selected_invoice,)
+        )
+
+        data = cursor.fetchone()
+
+        st.session_state.customer = data[0]
+        st.session_state.contact = data[1]
+        st.session_state.gstin = data[2]
+        st.session_state.date = pd.to_datetime(data[3])
+
+        st.success("Invoice details loaded above. You can create a new invoice now.")
