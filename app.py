@@ -287,8 +287,6 @@ elements.append(Spacer(1,30))
 
 elements.append(Paragraph("<b>Authorized Signature</b>", styles["Normal"]))
 
-    return buffer
-
 
 # ====================================================
 # CREATE INVOICE
