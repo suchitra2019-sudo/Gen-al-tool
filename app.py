@@ -2,11 +2,12 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import os
+from datetime import date as dt_date
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from docx import Document
 
-st.set_page_config(page_title="Professional Invoice System",layout="wide")
+st.set_page_config(page_title="Professional Invoice System", layout="wide")
 
 st.title("GST Professional Invoice Generator")
 
@@ -14,7 +15,7 @@ os.makedirs("invoices", exist_ok=True)
 
 # ---------------- DATABASE ----------------
 
-conn = sqlite3.connect("invoice.db",check_same_thread=False)
+conn = sqlite3.connect("invoice.db", check_same_thread=False)
 cursor = conn.cursor()
 
 cursor.execute("""
@@ -40,11 +41,22 @@ price REAL
 
 conn.commit()
 
-# ---------------- SESSION STATE ----------------
+# ---------------- SESSION STATE SAFE INIT ----------------
 
-for key in ["customer","contact","gstin","date","selected_invoice"]:
-    if key not in st.session_state:
-        st.session_state[key] = ""
+if "customer" not in st.session_state:
+    st.session_state.customer = ""
+
+if "contact" not in st.session_state:
+    st.session_state.contact = ""
+
+if "gstin" not in st.session_state:
+    st.session_state.gstin = ""
+
+if "date" not in st.session_state:
+    st.session_state.date = dt_date.today()
+
+if "selected_invoice" not in st.session_state:
+    st.session_state.selected_invoice = None
 
 # ---------------- AUTO INVOICE NUMBER ----------------
 
@@ -72,25 +84,30 @@ company_address = st.sidebar.text_area(
 
 # ---------------- CUSTOMER DETAILS ----------------
 
-col1,col2 = st.columns(2)
+col1, col2 = st.columns(2)
 
 with col1:
-    date = st.date_input("Invoice Date",value=st.session_state.get("date"))
+
+    date = st.date_input(
+    "Invoice Date",
+    value=st.session_state.date
+    )
 
     customer = st.text_input(
     "Customer Name",
-    value=st.session_state.get("customer")
+    value=st.session_state.customer
     )
 
 with col2:
+
     contact = st.text_input(
     "Contact",
-    value=st.session_state.get("contact")
+    value=st.session_state.contact
     )
 
     gstin = st.text_input(
     "Customer GSTIN",
-    value=st.session_state.get("gstin")
+    value=st.session_state.gstin
     )
 
 address = st.text_area("Customer Address")
@@ -125,7 +142,9 @@ gst_rate=st.number_input("GST %",18.0)
 # ---------------- CALCULATIONS ----------------
 
 subtotal=sum(q*p for _,q,p in items)
+
 gst_amount=subtotal*gst_rate/100
+
 total=subtotal+gst_amount+transport
 
 st.write("Subtotal:",subtotal)
@@ -175,56 +194,48 @@ with col2:
 
             st.success("Invoice Updated")
 
-# ---------------- PROFESSIONAL HTML INVOICE PREVIEW ----------------
+# ---------------- PROFESSIONAL HTML INVOICE ----------------
 
 st.subheader("Invoice Preview")
 
-html_invoice=f"""
+html=f"""
 <style>
-
-.invoice-box{{
+.invoice-box {{
 width:800px;
 margin:auto;
 border:1px solid #eee;
 padding:30px;
 font-family:Arial;
 }}
-
-.header{{
+.header {{
 display:flex;
 justify-content:space-between;
 }}
-
-.company{{
+.company {{
 font-size:22px;
 font-weight:bold;
 }}
-
-table{{
+table {{
 width:100%;
 border-collapse:collapse;
 margin-top:20px;
 }}
-
-table,th,td{{
+table,th,td {{
 border:1px solid #ccc;
 }}
-
-th,td{{
+th,td {{
 padding:8px;
-text-align:left;
 }}
-
-.total{{
+.total {{
 text-align:right;
 font-weight:bold;
 }}
-
 </style>
 
 <div class="invoice-box">
 
 <div class="header">
+
 <div>
 <div class="company">{company_name}</div>
 <div>{company_address}</div>
@@ -236,6 +247,7 @@ font-weight:bold;
 Invoice No: {invoice_no}<br>
 Date: {date}
 </div>
+
 </div>
 
 <hr>
@@ -257,7 +269,7 @@ GSTIN: {gstin}
 
 for desc,qty,price in items:
 
-    html_invoice+=f"""
+    html+=f"""
 <tr>
 <td>{desc}</td>
 <td>{qty}</td>
@@ -266,8 +278,7 @@ for desc,qty,price in items:
 </tr>
 """
 
-html_invoice+=f"""
-
+html+=f"""
 <tr>
 <td colspan="3" class="total">Subtotal</td>
 <td>{subtotal}</td>
@@ -292,39 +303,47 @@ html_invoice+=f"""
 </div>
 """
 
-st.markdown(html_invoice,unsafe_allow_html=True)
+st.markdown(html, unsafe_allow_html=True)
 
-# ---------------- HISTORY ----------------
+# ---------------- HISTORY TABLE ----------------
 
 st.header("Invoice History")
 
 df=pd.read_sql("SELECT * FROM invoices",conn)
 
-edited=st.data_editor(df,use_container_width=True,hide_index=True)
+if not df.empty:
 
-selection=st.session_state.get("data_editor",{})
+    event=st.data_editor(
+    df,
+    key="history_table",
+    use_container_width=True,
+    hide_index=True
+    )
 
-# auto detect clicked row
+    if st.session_state.history_table:
 
-if "edited_rows" in selection and selection["edited_rows"]:
+        try:
 
-    row=list(selection["edited_rows"].keys())[0]
+            selected_index=list(st.session_state.history_table["edited_rows"].keys())[0]
 
-    selected=df.iloc[row]
+            row=df.iloc[selected_index]
 
-    st.session_state.selected_invoice=selected["invoice_no"]
-    st.session_state.customer=selected["customer"]
-    st.session_state.contact=selected["contact"]
-    st.session_state.gstin=selected["gstin"]
-    st.session_state.date=pd.to_datetime(selected["date"])
+            st.session_state.selected_invoice=row["invoice_no"]
+            st.session_state.customer=row["customer"]
+            st.session_state.contact=row["contact"]
+            st.session_state.gstin=row["gstin"]
+            st.session_state.date=pd.to_datetime(row["date"]).date()
 
-    st.rerun()
+            st.rerun()
+
+        except:
+            pass
 
 # ---------------- DELETE ----------------
 
 st.subheader("Delete Invoice")
 
-delete_id=st.number_input("Enter Invoice No to Delete",step=1)
+delete_id=st.number_input("Enter Invoice Number",step=1)
 
 if st.button("Delete Invoice"):
 
