@@ -3,15 +3,17 @@ import pandas as pd
 import sqlite3
 import streamlit.components.v1 as components
 from datetime import date
-from weasyprint import HTML
-import tempfile
+import io
 import base64
+
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
 
 st.set_page_config(page_title="GST Billing Software", layout="wide")
 
-# ==============================
-# DATABASE
-# ==============================
+# ---------------- DATABASE ----------------
 
 conn = sqlite3.connect("billing.db", check_same_thread=False)
 cursor = conn.cursor()
@@ -42,9 +44,7 @@ total REAL)
 
 conn.commit()
 
-# ==============================
-# SIDEBAR
-# ==============================
+# ---------------- SIDEBAR ----------------
 
 st.sidebar.title("Billing Menu")
 
@@ -58,150 +58,62 @@ page = st.sidebar.radio(
 ]
 )
 
-# ==============================
-# HTML + CSS INVOICE TEMPLATE
-# ==============================
+# ---------------- HTML PREVIEW ----------------
 
-def generate_invoice_html(data):
+def generate_invoice_html(company,address,gst,logo,
+invoice_no,date,customer,contact,gstin,
+items,subtotal,cgst,sgst,transport,total):
 
-    html = f"""
-<!DOCTYPE html>
-<html>
+    rows=""
 
-<head>
+    for desc,qty,price in items:
 
+        rows+=f"""
+<tr>
+<td>{desc}</td>
+<td>{qty}</td>
+<td>{price}</td>
+<td>{qty*price}</td>
+</tr>
+"""
+
+    html=f"""
 <style>
 
-body {{
-font-family: Arial;
-margin:40px;
-}}
+body{{font-family:Arial}}
 
-.invoice-box {{
-max-width:900px;
-margin:auto;
-padding:30px;
-border:1px solid #eee;
-}}
+.invoice{{width:800px;margin:auto;border:1px solid #ddd;padding:20px}}
 
-.header {{
-display:flex;
-justify-content:space-between;
-}}
+table{{width:100%;border-collapse:collapse}}
 
-.logo {{
-height:70px;
-}}
+th,td{{border:1px solid #ccc;padding:8px}}
 
-.company {{
-text-align:right;
-}}
-
-.title {{
-text-align:center;
-font-size:28px;
-margin-top:10px;
-margin-bottom:20px;
-color:#1f4e79;
-font-weight:bold;
-}}
-
-.info-table {{
-width:100%;
-margin-bottom:20px;
-}}
-
-.info-table td {{
-padding:6px;
-}}
-
-.items {{
-width:100%;
-border-collapse:collapse;
-}}
-
-.items th {{
-background:#1f4e79;
-color:white;
-padding:10px;
-border:1px solid #ddd;
-}}
-
-.items td {{
-padding:10px;
-border:1px solid #ddd;
-text-align:center;
-}}
-
-.total-box {{
-margin-top:20px;
-width:40%;
-float:right;
-}}
-
-.total-box table {{
-width:100%;
-}}
-
-.total-box td {{
-padding:8px;
-}}
-
-.grand-total {{
-font-size:18px;
-font-weight:bold;
-border-top:2px solid black;
-}}
-
-.footer {{
-margin-top:80px;
-display:flex;
-justify-content:space-between;
-}}
+th{{background:#1f4e79;color:white}}
 
 </style>
 
-</head>
+<div class="invoice">
 
-<body>
+<h2>{company}</h2>
 
-<div class="invoice-box">
+{address}<br>
+GSTIN : {gst}
 
-<div class="header">
+<hr>
 
-<img src="{data['logo']}" class="logo">
+<h3>TAX INVOICE</h3>
 
-<div class="company">
-<b>{data['company']}</b><br>
-{data['address']}<br>
-GSTIN: {data['gst']}
-</div>
+Invoice No : {invoice_no}<br>
+Date : {date}
 
-</div>
+<br>
 
-<div class="title">TAX INVOICE</div>
-
-<table class="info-table">
-
-<tr>
-
-<td>
 <b>Bill To</b><br>
-{data['customer']}<br>
-Contact: {data['contact']}<br>
-GSTIN: {data['gstin']}
-</td>
+{customer}<br>
+Contact : {contact}<br>
+GSTIN : {gstin}
 
-<td align="right">
-<b>Invoice No:</b> {data['invoice_no']}<br>
-<b>Date:</b> {data['date']}
-</td>
-
-</tr>
-
-</table>
-
-<table class="items">
+<table>
 
 <tr>
 <th>Description</th>
@@ -210,209 +122,194 @@ GSTIN: {data['gstin']}
 <th>Total</th>
 </tr>
 
-{data['rows']}
+{rows}
 
-</table>
-
-<div class="total-box">
-
-<table>
-
-<tr>
-<td>Subtotal</td>
-<td align="right">{data['subtotal']}</td>
-</tr>
-
-<tr>
-<td>CGST</td>
-<td align="right">{data['cgst']}</td>
-</tr>
-
-<tr>
-<td>SGST</td>
-<td align="right">{data['sgst']}</td>
-</tr>
-
-<tr>
-<td>Transport</td>
-<td align="right">{data['transport']}</td>
-</tr>
-
-<tr class="grand-total">
-<td>Grand Total</td>
-<td align="right">{data['total']}</td>
-</tr>
+<tr><td colspan=3>Subtotal</td><td>{subtotal}</td></tr>
+<tr><td colspan=3>CGST</td><td>{cgst}</td></tr>
+<tr><td colspan=3>SGST</td><td>{sgst}</td></tr>
+<tr><td colspan=3>Transport</td><td>{transport}</td></tr>
+<tr><td colspan=3><b>Grand Total</b></td><td><b>{total}</b></td></tr>
 
 </table>
 
 </div>
-
-<div class="footer">
-
-<div>
-Thank you for your business!
-</div>
-
-<div>
-Authorized Signature
-</div>
-
-</div>
-
-</div>
-
-</body>
-</html>
 """
 
     return html
 
-# ==============================
-# PDF GENERATOR
-# ==============================
+# ---------------- PDF GENERATOR ----------------
 
-def generate_pdf(html):
+def generate_pdf(company,address,gst,logo_file,
+invoice_no,date,customer,contact,gstin,
+items,subtotal,cgst,sgst,transport,total):
 
-    pdf_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    buffer = io.BytesIO()
 
-    HTML(string=html).write_pdf(pdf_file.name)
+    doc = SimpleDocTemplate(buffer,pagesize=A4)
 
-    return pdf_file.name
+    styles = getSampleStyleSheet()
 
-# ==============================
-# CREATE INVOICE
-# ==============================
+    elements = []
 
-if page == "Create Invoice":
+    # COMPANY HEADER
+
+    elements.append(Paragraph(f"<b>{company}</b>",styles['Title']))
+    elements.append(Paragraph(address,styles['Normal']))
+    elements.append(Paragraph(f"GSTIN : {gst}",styles['Normal']))
+
+    elements.append(Spacer(1,20))
+
+    # INVOICE INFO
+
+    info = Table([
+        ["Invoice No",invoice_no,"Date",str(date)],
+        ["Customer",customer,"Contact",contact],
+        ["GSTIN",gstin,"",""]
+    ])
+
+    info.setStyle(TableStyle([
+        ('GRID',(0,0),(-1,-1),1,colors.grey)
+    ]))
+
+    elements.append(info)
+
+    elements.append(Spacer(1,20))
+
+    # ITEMS TABLE
+
+    data=[["Description","Qty","Price","Total"]]
+
+    for desc,qty,price in items:
+
+        data.append([desc,qty,price,qty*price])
+
+    data.append(["","","Subtotal",subtotal])
+    data.append(["","","CGST",cgst])
+    data.append(["","","SGST",sgst])
+    data.append(["","","Transport",transport])
+    data.append(["","","Grand Total",total])
+
+    table = Table(data)
+
+    table.setStyle(TableStyle([
+
+        ('BACKGROUND',(0,0),(-1,0),colors.HexColor("#1f4e79")),
+        ('TEXTCOLOR',(0,0),(-1,0),colors.white),
+        ('GRID',(0,0),(-1,-1),1,colors.black),
+        ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),
+        ('FONTNAME',(2,-1),(-1,-1),'Helvetica-Bold')
+
+    ]))
+
+    elements.append(table)
+
+    elements.append(Spacer(1,40))
+
+    elements.append(Paragraph("Authorized Signature",styles['Normal']))
+
+    doc.build(elements)
+
+    buffer.seek(0)
+
+    return buffer
+
+# ---------------- CREATE INVOICE ----------------
+
+if page=="Create Invoice":
 
     st.title("GST Invoice Generator")
 
     cursor.execute("SELECT MAX(invoice_no) FROM invoices")
-    result = cursor.fetchone()
+    result=cursor.fetchone()
 
-    invoice_no = 1001 if result[0] is None else result[0] + 1
+    invoice_no=1001 if result[0] is None else result[0]+1
 
     st.subheader(f"Invoice No : {invoice_no}")
 
     st.sidebar.header("Company Settings")
 
-    company = st.sidebar.text_input("Company Name","My Company")
-    address = st.sidebar.text_area("Address","Mumbai")
-    gst = st.sidebar.text_input("GSTIN")
+    company=st.sidebar.text_input("Company Name","My Company")
+    address=st.sidebar.text_area("Address","Mumbai")
+    gst=st.sidebar.text_input("GSTIN")
 
-    logo_file = st.sidebar.file_uploader("Upload Logo")
+    logo_file=st.sidebar.file_uploader("Upload Company Logo")
 
-    logo_data = ""
+    # CUSTOMER
 
-    if logo_file:
-
-        logo_bytes = logo_file.read()
-
-        logo_data = "data:image/png;base64," + base64.b64encode(logo_bytes).decode()
-
-    customers = pd.read_sql("SELECT * FROM customers",conn)
+    customers=pd.read_sql("SELECT * FROM customers",conn)
 
     if not customers.empty:
 
-        customer = st.selectbox("Customer",customers["name"])
+        customer=st.selectbox("Customer",customers["name"])
 
-        cust = customers[customers["name"]==customer].iloc[0]
+        cust=customers[customers["name"]==customer].iloc[0]
 
-        contact = cust["contact"]
-        gstin = cust["gstin"]
+        contact=cust["contact"]
+        gstin=cust["gstin"]
 
     else:
 
-        customer = st.text_input("Customer")
-        contact = st.text_input("Contact")
-        gstin = st.text_input("GSTIN")
+        customer=st.text_input("Customer")
+        contact=st.text_input("Contact")
+        gstin=st.text_input("GSTIN")
 
-    invoice_date = st.date_input("Invoice Date",date.today())
+    invoice_date=st.date_input("Invoice Date",date.today())
 
-    products = pd.read_sql("SELECT * FROM products",conn)
+    # PRODUCTS
 
-    items = []
+    products=pd.read_sql("SELECT * FROM products",conn)
 
-    rows = st.number_input("Number of Items",1,10,1)
+    items=[]
+
+    rows=st.number_input("Number of Items",1,10,1)
 
     for i in range(int(rows)):
 
-        col1,col2,col3 = st.columns(3)
+        c1,c2,c3=st.columns(3)
 
-        with col1:
+        with c1:
 
             if not products.empty:
 
-                product = st.selectbox(f"Product {i+1}",products["name"],key=i)
+                product=st.selectbox(f"Product {i+1}",products["name"],key=i)
 
-                price = products[products["name"]==product]["price"].values[0]
+                price=products[products["name"]==product]["price"].values[0]
 
             else:
 
-                product = st.text_input(f"Item {i+1}")
+                product=st.text_input(f"Item {i+1}")
+                price=st.number_input(f"Price {i+1}")
 
-                price = st.number_input(f"Price {i+1}")
+        with c2:
 
-        with col2:
+            qty=st.number_input(f"Qty {i+1}",1)
 
-            qty = st.number_input(f"Qty {i+1}",1)
-
-        with col3:
+        with c3:
 
             st.write("Price:",price)
 
         items.append((product,qty,price))
 
-    transport = st.number_input("Transport",0.0)
+    transport=st.number_input("Transport",0.0)
 
-    subtotal = sum(q*p for _,q,p in items)
+    subtotal=sum(q*p for _,q,p in items)
 
-    cgst = subtotal * 0.09
-    sgst = subtotal * 0.09
+    cgst=subtotal*0.09
+    sgst=subtotal*0.09
 
-    total = subtotal + cgst + sgst + transport
+    total=subtotal+cgst+sgst+transport
 
     st.write("Subtotal:",subtotal)
     st.write("CGST:",cgst)
     st.write("SGST:",sgst)
     st.write("Total:",total)
 
-    # TABLE ROWS
-
-    rows_html = ""
-
-    for item,qty,price in items:
-
-        rows_html += f"""
-<tr>
-<td>{item}</td>
-<td>{qty}</td>
-<td>{price}</td>
-<td>{qty*price}</td>
-</tr>
-"""
-
-    data = {
-
-    "logo":logo_data,
-    "company":company,
-    "address":address,
-    "gst":gst,
-    "invoice_no":invoice_no,
-    "date":invoice_date,
-    "customer":customer,
-    "contact":contact,
-    "gstin":gstin,
-    "rows":rows_html,
-    "subtotal":subtotal,
-    "cgst":cgst,
-    "sgst":sgst,
-    "transport":transport,
-    "total":total
-
-    }
-
-    html = generate_invoice_html(data)
+    html=generate_invoice_html(
+    company,address,gst,logo_file,
+    invoice_no,invoice_date,
+    customer,contact,gstin,
+    items,subtotal,cgst,sgst,transport,total
+    )
 
     if st.toggle("Invoice Preview"):
 
@@ -427,28 +324,29 @@ if page == "Create Invoice":
 
         conn.commit()
 
-        pdf_path = generate_pdf(html)
+        pdf=generate_pdf(
+        company,address,gst,logo_file,
+        invoice_no,invoice_date,
+        customer,contact,gstin,
+        items,subtotal,cgst,sgst,transport,total
+        )
 
-        with open(pdf_path,"rb") as f:
+        st.download_button(
+        "Download Invoice PDF",
+        data=pdf,
+        file_name=f"invoice_{invoice_no}.pdf",
+        mime="application/pdf"
+        )
 
-            st.download_button(
-            "Download Professional Invoice PDF",
-            f,
-            file_name=f"Invoice_{invoice_no}.pdf",
-            mime="application/pdf"
-            )
+# ---------------- CUSTOMER MASTER ----------------
 
-# ==============================
-# CUSTOMER MASTER
-# ==============================
-
-elif page == "Customer Master":
+elif page=="Customer Master":
 
     st.title("Customer Master")
 
-    name = st.text_input("Customer Name")
-    contact = st.text_input("Contact")
-    gstin = st.text_input("GSTIN")
+    name=st.text_input("Customer Name")
+    contact=st.text_input("Contact")
+    gstin=st.text_input("GSTIN")
 
     if st.button("Add Customer"):
 
@@ -461,20 +359,18 @@ elif page == "Customer Master":
 
         st.success("Customer Added")
 
-    df = pd.read_sql("SELECT * FROM customers",conn)
+    df=pd.read_sql("SELECT * FROM customers",conn)
 
     st.dataframe(df)
 
-# ==============================
-# PRODUCT MASTER
-# ==============================
+# ---------------- PRODUCT MASTER ----------------
 
-elif page == "Product Master":
+elif page=="Product Master":
 
     st.title("Product Master")
 
-    name = st.text_input("Product Name")
-    price = st.number_input("Price")
+    name=st.text_input("Product Name")
+    price=st.number_input("Price")
 
     if st.button("Add Product"):
 
@@ -487,18 +383,16 @@ elif page == "Product Master":
 
         st.success("Product Added")
 
-    df = pd.read_sql("SELECT * FROM products",conn)
+    df=pd.read_sql("SELECT * FROM products",conn)
 
     st.dataframe(df)
 
-# ==============================
-# INVOICE HISTORY
-# ==============================
+# ---------------- INVOICE HISTORY ----------------
 
-elif page == "Invoice History":
+elif page=="Invoice History":
 
     st.title("Invoice History")
 
-    df = pd.read_sql("SELECT * FROM invoices",conn)
+    df=pd.read_sql("SELECT * FROM invoices",conn)
 
     st.dataframe(df)
