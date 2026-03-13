@@ -39,9 +39,6 @@ if "gstin" not in st.session_state:
 if "date" not in st.session_state:
     st.session_state.date=dt_date.today()
 
-if "selected_invoice" not in st.session_state:
-    st.session_state.selected_invoice=None
-
 # ---------------- SIDEBAR ----------------
 
 st.sidebar.title("Navigation")
@@ -52,18 +49,18 @@ page = st.sidebar.radio(
 )
 
 # =====================================================
-# FUNCTION : PROFESSIONAL INVOICE TEMPLATE
+# FUNCTION : INVOICE HTML
 # =====================================================
 
-def generate_invoice_html(company_name, company_address, company_gst,
+def generate_invoice_html(company_name,company_address,company_gst,
 invoice_no,date,customer,contact,gstin,items,
 subtotal,gst_amount,transport,total):
 
-    rows=""
+    rows_html=""
 
     for desc,qty,price in items:
 
-        rows += f"""
+        rows_html += f"""
         <tr>
         <td>{desc}</td>
         <td>{qty}</td>
@@ -73,14 +70,13 @@ subtotal,gst_amount,transport,total):
         """
 
     html=f"""
-
 <style>
 
-.invoice-container {{
+.invoice-box {{
 width:800px;
 margin:auto;
+padding:20px;
 border:1px solid #ddd;
-padding:25px;
 font-family:Arial;
 background:white;
 }}
@@ -101,22 +97,22 @@ border-collapse:collapse;
 margin-top:20px;
 }}
 
-table,th,td {{
+table, th, td {{
 border:1px solid #ccc;
 }}
 
-th,td {{
+th, td {{
 padding:8px;
 text-align:left;
 }}
 
-.total-row {{
+.total {{
 font-weight:bold;
 }}
 
 </style>
 
-<div class="invoice-container">
+<div class="invoice-box">
 
 <div class="header">
 
@@ -127,7 +123,7 @@ font-weight:bold;
 </div>
 
 <div>
-<h2>TAX INVOICE</h2>
+<h3>TAX INVOICE</h3>
 Invoice No : {invoice_no}<br>
 Date : {date}
 </div>
@@ -150,24 +146,24 @@ GSTIN : {gstin}
 <th>Total</th>
 </tr>
 
-{rows}
+{rows_html}
 
-<tr class="total-row">
+<tr class="total">
 <td colspan="3">Subtotal</td>
 <td>{subtotal}</td>
 </tr>
 
-<tr class="total-row">
+<tr class="total">
 <td colspan="3">GST</td>
 <td>{gst_amount}</td>
 </tr>
 
-<tr class="total-row">
+<tr class="total">
 <td colspan="3">Transport</td>
 <td>{transport}</td>
 </tr>
 
-<tr class="total-row">
+<tr class="total">
 <td colspan="3">Grand Total</td>
 <td>{total}</td>
 </tr>
@@ -183,16 +179,13 @@ GSTIN : {gstin}
 
     return html
 
-
 # =====================================================
 # CREATE INVOICE PAGE
 # =====================================================
 
-if page == "Create Invoice":
+if page=="Create Invoice":
 
     st.title("GST Professional Invoice Generator")
-
-    os.makedirs("invoices",exist_ok=True)
 
     cursor.execute("SELECT MAX(invoice_no) FROM invoices")
     result=cursor.fetchone()
@@ -201,7 +194,7 @@ if page == "Create Invoice":
 
     st.subheader(f"Invoice No : {invoice_no}")
 
-    # ---------------- COMPANY ----------------
+    # COMPANY
 
     st.sidebar.header("Company Details")
 
@@ -216,7 +209,7 @@ if page == "Create Invoice":
     "HOUSE NO-301 VAJRESHWARI ROAD, BHIWANDI"
     )
 
-    # ---------------- CUSTOMER ----------------
+    # CUSTOMER
 
     col1,col2=st.columns(2)
 
@@ -244,7 +237,7 @@ if page == "Create Invoice":
         value=st.session_state.gstin
         )
 
-    # ---------------- ITEMS ----------------
+    # ITEMS
 
     st.subheader("Invoice Items")
 
@@ -271,27 +264,23 @@ if page == "Create Invoice":
 
     gst_rate=st.number_input("GST %",18.0)
 
-    # ---------------- CALCULATION ----------------
-
     subtotal=sum(q*p for _,q,p in items)
-
     gst_amount=subtotal*gst_rate/100
-
     total=subtotal+gst_amount+transport
 
     st.write("Subtotal :",subtotal)
     st.write("GST :",gst_amount)
     st.write("Grand Total :",total)
 
-    # ---------------- PREVIEW SLIDER ----------------
+    # PREVIEW
 
     st.subheader("Invoice Preview")
 
-    preview = st.toggle("Show Invoice Preview")
+    preview=st.toggle("Show Invoice Preview")
 
     if preview:
 
-        html=generate_invoice_html(
+        invoice_html=generate_invoice_html(
         company_name,
         company_address,
         company_gst,
@@ -307,9 +296,9 @@ if page == "Create Invoice":
         total
         )
 
-        st.markdown(html,unsafe_allow_html=True)
+        st.markdown(invoice_html,unsafe_allow_html=True)
 
-    # ---------------- SAVE ----------------
+    # SAVE
 
     if st.button("Generate Invoice"):
 
@@ -322,12 +311,11 @@ if page == "Create Invoice":
 
         st.success("Invoice Created Successfully")
 
-
 # =====================================================
 # HISTORY PAGE
 # =====================================================
 
-elif page == "Invoice History":
+elif page=="Invoice History":
 
     st.title("Invoice History")
 
@@ -357,7 +345,7 @@ elif page == "Invoice History":
 
             st.success("Invoice Loaded. Go to Create Invoice page.")
 
-    # ---------------- DELETE ----------------
+    # DELETE
 
     st.subheader("Delete Invoice")
 
