@@ -400,9 +400,9 @@ if page=="Create Invoice":
 
     st.sidebar.header("Company Settings")
 
-    company=st.sidebar.text_input("Company Name","My Company")
-    address=st.sidebar.text_area("Address","Mumbai")
-    gst=st.sidebar.text_input("GSTIN","27ABCDE1234F1Z5")
+    company=st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
+    address=st.sidebar.text_area("Address","HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI, DIST-THANE")
+    gst=st.sidebar.text_input("GSTIN","27CFKPP2024L1Z7")
 
     logo_file=st.sidebar.file_uploader("Upload Company Logo")
 
