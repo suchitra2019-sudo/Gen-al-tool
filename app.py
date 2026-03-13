@@ -1,12 +1,12 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
+import os
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from docx import Document
-import os
 
-st.set_page_config(page_title="Professional Invoice System")
+st.set_page_config(page_title="Professional Invoice System",layout="wide")
 
 st.title("GST Professional Invoice Generator")
 
@@ -14,7 +14,7 @@ os.makedirs("invoices", exist_ok=True)
 
 # ---------------- DATABASE ----------------
 
-conn = sqlite3.connect("invoice.db", check_same_thread=False)
+conn = sqlite3.connect("invoice.db",check_same_thread=False)
 cursor = conn.cursor()
 
 cursor.execute("""
@@ -42,27 +42,16 @@ conn.commit()
 
 # ---------------- SESSION STATE ----------------
 
-if "customer" not in st.session_state:
-    st.session_state.customer = ""
-
-if "contact" not in st.session_state:
-    st.session_state.contact = ""
-
-if "gstin" not in st.session_state:
-    st.session_state.gstin = ""
-
-if "date" not in st.session_state:
-    st.session_state.date = None
+for key in ["customer","contact","gstin","date","selected_invoice"]:
+    if key not in st.session_state:
+        st.session_state[key] = ""
 
 # ---------------- AUTO INVOICE NUMBER ----------------
 
 cursor.execute("SELECT MAX(invoice_no) FROM invoices")
 result = cursor.fetchone()
 
-if result[0] is None:
-    invoice_no = 1001
-else:
-    invoice_no = int(result[0]) + 1
+invoice_no = 1001 if result[0] is None else int(result[0]) + 1
 
 st.subheader(f"Invoice No: {invoice_no}")
 
@@ -70,9 +59,11 @@ st.subheader(f"Invoice No: {invoice_no}")
 
 st.sidebar.header("Company Details")
 
-company_name = st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
+company_name = st.sidebar.text_input(
+"Company Name","SHIVKRUTI ENTERPRISES")
 
-company_gst = st.sidebar.text_input("Company GSTIN","27CFKPP2024L1Z7")
+company_gst = st.sidebar.text_input(
+"Company GSTIN","27CFKPP2024L1Z7")
 
 company_address = st.sidebar.text_area(
 "Company Address",
@@ -81,13 +72,26 @@ company_address = st.sidebar.text_area(
 
 # ---------------- CUSTOMER DETAILS ----------------
 
-date = st.date_input("Invoice Date", value=st.session_state.date)
+col1,col2 = st.columns(2)
 
-customer = st.text_input("Customer Name", value=st.session_state.customer)
+with col1:
+    date = st.date_input("Invoice Date",value=st.session_state.get("date"))
 
-contact = st.text_input("Contact Number", value=st.session_state.contact)
+    customer = st.text_input(
+    "Customer Name",
+    value=st.session_state.get("customer")
+    )
 
-gstin = st.text_input("Customer GSTIN", value=st.session_state.gstin)
+with col2:
+    contact = st.text_input(
+    "Contact",
+    value=st.session_state.get("contact")
+    )
+
+    gstin = st.text_input(
+    "Customer GSTIN",
+    value=st.session_state.get("gstin")
+    )
 
 address = st.text_area("Customer Address")
 
@@ -95,212 +99,243 @@ address = st.text_area("Customer Address")
 
 st.subheader("Invoice Items")
 
-items = []
+items=[]
 
-num_items = st.number_input("Number of Items",1,10,1)
+num_items=st.number_input("Number of Items",1,10,1)
 
 for i in range(int(num_items)):
 
-    col1,col2,col3 = st.columns(3)
+    c1,c2,c3=st.columns(3)
 
-    with col1:
-        desc = st.text_input(f"Description {i+1}")
+    with c1:
+        desc=st.text_input(f"Description {i+1}")
 
-    with col2:
-        qty = st.number_input(f"Qty {i+1}",min_value=1)
+    with c2:
+        qty=st.number_input(f"Qty {i+1}",min_value=1)
 
-    with col3:
-        price = st.number_input(f"Price {i+1}",min_value=0.0)
+    with c3:
+        price=st.number_input(f"Price {i+1}",min_value=0.0)
 
     items.append((desc,qty,price))
 
-transport = st.number_input("Transport Charges",0.0)
+transport=st.number_input("Transport Charges",0.0)
 
-gst_rate = st.number_input("GST %",18.0)
+gst_rate=st.number_input("GST %",18.0)
 
 # ---------------- CALCULATIONS ----------------
 
-subtotal = sum(q*p for _,q,p in items)
-
-gst_amount = subtotal * gst_rate / 100
-
-total = subtotal + gst_amount + transport
+subtotal=sum(q*p for _,q,p in items)
+gst_amount=subtotal*gst_rate/100
+total=subtotal+gst_amount+transport
 
 st.write("Subtotal:",subtotal)
 st.write("GST:",gst_amount)
 st.write("Transport:",transport)
 st.write("Grand Total:",total)
 
-# ---------------- GENERATE INVOICE ----------------
+# ---------------- GENERATE / UPDATE ----------------
 
-if st.button("Generate Invoice"):
+col1,col2=st.columns(2)
 
-    cursor.execute(
-    "INSERT INTO invoices (invoice_no,customer,contact,gstin,date,total) VALUES (?,?,?,?,?,?)",
-    (invoice_no,customer,contact,gstin,str(date),total)
-    )
+with col1:
 
-    for desc,qty,price in items:
+    if st.button("Generate Invoice"):
+
         cursor.execute(
-        "INSERT INTO invoice_items VALUES (?,?,?,?)",
-        (invoice_no,desc,qty,price)
+        "INSERT INTO invoices (invoice_no,customer,contact,gstin,date,total) VALUES (?,?,?,?,?,?)",
+        (invoice_no,customer,contact,gstin,str(date),total)
         )
 
-    conn.commit()
+        for desc,qty,price in items:
 
-# ---------------- PDF ----------------
+            cursor.execute(
+            "INSERT INTO invoice_items VALUES (?,?,?,?)",
+            (invoice_no,desc,qty,price)
+            )
 
-    pdf_file = f"invoices/invoice_{invoice_no}.pdf"
+        conn.commit()
 
-    c = canvas.Canvas(pdf_file,pagesize=A4)
+        st.success("Invoice Generated Successfully")
 
-    width,height = A4
+with col2:
 
-    c.setFont("Helvetica-Bold",16)
-    c.drawString(150,height-50,company_name)
+    if st.button("Update Selected Invoice"):
 
-    c.setFont("Helvetica",11)
-    c.drawString(150,height-70,company_address)
+        if st.session_state.selected_invoice:
 
-    c.drawString(150,height-90,f"GSTIN: {company_gst}")
+            cursor.execute(
+            """UPDATE invoices
+            SET customer=?,contact=?,gstin=?,date=?,total=?
+            WHERE invoice_no=?""",
+            (customer,contact,gstin,str(date),total,
+            st.session_state.selected_invoice)
+            )
 
-    c.drawString(40,height-130,f"Invoice No: {invoice_no}")
-    c.drawString(40,height-150,f"Date: {date}")
+            conn.commit()
 
-    c.drawString(40,height-180,f"Bill To: {customer}")
-    c.drawString(40,height-200,f"Contact: {contact}")
-    c.drawString(40,height-220,f"GSTIN: {gstin}")
+            st.success("Invoice Updated")
 
-    y = height-260
+# ---------------- PROFESSIONAL HTML INVOICE PREVIEW ----------------
 
-    c.drawString(40,y,"Description")
-    c.drawString(300,y,"Qty")
-    c.drawString(350,y,"Price")
-    c.drawString(420,y,"Total")
+st.subheader("Invoice Preview")
 
-    y -= 20
+html_invoice=f"""
+<style>
 
-    for desc,qty,price in items:
+.invoice-box{{
+width:800px;
+margin:auto;
+border:1px solid #eee;
+padding:30px;
+font-family:Arial;
+}}
 
-        line_total = qty*price
+.header{{
+display:flex;
+justify-content:space-between;
+}}
 
-        c.drawString(40,y,str(desc))
-        c.drawString(300,y,str(qty))
-        c.drawString(350,y,str(price))
-        c.drawString(420,y,str(line_total))
+.company{{
+font-size:22px;
+font-weight:bold;
+}}
 
-        y -= 20
+table{{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+}}
 
-    y -= 20
+table,th,td{{
+border:1px solid #ccc;
+}}
 
-    c.drawString(350,y,f"Subtotal: {subtotal}")
+th,td{{
+padding:8px;
+text-align:left;
+}}
 
-    y -= 20
-    c.drawString(350,y,f"GST: {gst_amount}")
+.total{{
+text-align:right;
+font-weight:bold;
+}}
 
-    y -= 20
-    c.drawString(350,y,f"Transport: {transport}")
+</style>
 
-    y -= 20
-    c.setFont("Helvetica-Bold",12)
-    c.drawString(350,y,f"Grand Total: {total}")
+<div class="invoice-box">
 
-    c.save()
+<div class="header">
+<div>
+<div class="company">{company_name}</div>
+<div>{company_address}</div>
+<div>GSTIN: {company_gst}</div>
+</div>
 
-# ---------------- WORD ----------------
+<div>
+<h3>INVOICE</h3>
+Invoice No: {invoice_no}<br>
+Date: {date}
+</div>
+</div>
 
-    word_file = f"invoices/invoice_{invoice_no}.docx"
+<hr>
 
-    doc = Document()
+<b>Bill To</b><br>
+{customer}<br>
+{contact}<br>
+GSTIN: {gstin}
 
-    doc.add_heading(company_name)
+<table>
 
-    doc.add_paragraph(company_address)
+<tr>
+<th>Description</th>
+<th>Qty</th>
+<th>Price</th>
+<th>Total</th>
+</tr>
+"""
 
-    doc.add_paragraph(f"GSTIN: {company_gst}")
+for desc,qty,price in items:
 
-    doc.add_heading("TAX INVOICE")
+    html_invoice+=f"""
+<tr>
+<td>{desc}</td>
+<td>{qty}</td>
+<td>{price}</td>
+<td>{qty*price}</td>
+</tr>
+"""
 
-    doc.add_paragraph(f"Invoice No: {invoice_no}")
-    doc.add_paragraph(f"Date: {date}")
+html_invoice+=f"""
 
-    doc.add_paragraph(f"Customer: {customer}")
+<tr>
+<td colspan="3" class="total">Subtotal</td>
+<td>{subtotal}</td>
+</tr>
 
-    table = doc.add_table(rows=1,cols=4)
+<tr>
+<td colspan="3" class="total">GST</td>
+<td>{gst_amount}</td>
+</tr>
 
-    headers = ["Description","Qty","Price","Total"]
+<tr>
+<td colspan="3" class="total">Transport</td>
+<td>{transport}</td>
+</tr>
 
-    for i,h in enumerate(headers):
-        table.rows[0].cells[i].text = h
+<tr>
+<td colspan="3" class="total">Grand Total</td>
+<td>{total}</td>
+</tr>
 
-    for desc,qty,price in items:
+</table>
+</div>
+"""
 
-        row = table.add_row().cells
-
-        row[0].text = str(desc)
-        row[1].text = str(qty)
-        row[2].text = str(price)
-        row[3].text = str(qty*price)
-
-    doc.add_paragraph(f"Grand Total: {total}")
-
-    doc.save(word_file)
-
-# ---------------- EXCEL ----------------
-
-    excel_file = f"invoices/invoice_{invoice_no}.xlsx"
-
-    df = pd.DataFrame(items,columns=["Description","Qty","Price"])
-
-    df["Total"] = df["Qty"] * df["Price"]
-
-    df.loc["Subtotal"] = ["","","",subtotal]
-    df.loc["GST"] = ["","","",gst_amount]
-    df.loc["Transport"] = ["","","",transport]
-    df.loc["Grand Total"] = ["","","",total]
-
-    df.to_excel(excel_file,index=False)
-
-    st.success("Invoice Generated Successfully")
-
-# ---------------- DOWNLOAD ----------------
-
-    with open(pdf_file,"rb") as f:
-        st.download_button("Download PDF",f,file_name="invoice.pdf")
-
-    with open(word_file,"rb") as f:
-        st.download_button("Download Word",f,file_name="invoice.docx")
-
-    with open(excel_file,"rb") as f:
-        st.download_button("Download Excel",f,file_name="invoice.xlsx")
+st.markdown(html_invoice,unsafe_allow_html=True)
 
 # ---------------- HISTORY ----------------
 
 st.header("Invoice History")
 
-history_df = pd.read_sql("SELECT * FROM invoices",conn)
+df=pd.read_sql("SELECT * FROM invoices",conn)
 
-st.dataframe(history_df)
+edited=st.data_editor(df,use_container_width=True,hide_index=True)
 
-if not history_df.empty:
+selection=st.session_state.get("data_editor",{})
 
-    selected_invoice = st.selectbox(
-        "Select Invoice Number to Copy",
-        history_df["invoice_no"]
+# auto detect clicked row
+
+if "edited_rows" in selection and selection["edited_rows"]:
+
+    row=list(selection["edited_rows"].keys())[0]
+
+    selected=df.iloc[row]
+
+    st.session_state.selected_invoice=selected["invoice_no"]
+    st.session_state.customer=selected["customer"]
+    st.session_state.contact=selected["contact"]
+    st.session_state.gstin=selected["gstin"]
+    st.session_state.date=pd.to_datetime(selected["date"])
+
+    st.rerun()
+
+# ---------------- DELETE ----------------
+
+st.subheader("Delete Invoice")
+
+delete_id=st.number_input("Enter Invoice No to Delete",step=1)
+
+if st.button("Delete Invoice"):
+
+    cursor.execute(
+    "DELETE FROM invoices WHERE invoice_no=?",(delete_id,)
     )
 
-    if st.button("Load Invoice Data"):
+    cursor.execute(
+    "DELETE FROM invoice_items WHERE invoice_no=?",(delete_id,)
+    )
 
-        cursor.execute(
-        "SELECT customer,contact,gstin,date FROM invoices WHERE invoice_no=?",
-        (selected_invoice,)
-        )
+    conn.commit()
 
-        data = cursor.fetchone()
-
-        st.session_state.customer = data[0]
-        st.session_state.contact = data[1]
-        st.session_state.gstin = data[2]
-        st.session_state.date = pd.to_datetime(data[3])
-
-        st.success("Invoice details loaded above. You can create a new invoice now.")
+    st.warning("Invoice Deleted")
