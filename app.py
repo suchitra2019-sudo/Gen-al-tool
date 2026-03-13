@@ -178,9 +178,9 @@ def generate_pdf(company,address,gst,logo,
 invoice_no,date,customer,contact,gstin,
 items,subtotal,cgst,sgst,transport,total):
 
-    buffer=io.BytesIO()
+    buffer = io.BytesIO()
 
-    doc=SimpleDocTemplate(
+    doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
         rightMargin=40,
@@ -189,47 +189,134 @@ items,subtotal,cgst,sgst,transport,total):
         bottomMargin=40
     )
 
-    styles=getSampleStyleSheet()
-    elements=[]
+    styles = getSampleStyleSheet()
+    elements = []
 
 # ---------------- HEADER ----------------
 
-    header_data=[]
-
     if logo:
-        logo_img=Image(logo,width=80,height=50)
+        logo_img = Image(logo,width=60,height=60)
     else:
-        logo_img=""
+        logo_img = ""
 
-    company_info=Paragraph(
+    company_block = Paragraph(
         f"<b>{company}</b><br/>{address}<br/>GSTIN : {gst}",
         styles["Normal"]
     )
 
-    header_data.append([logo_img,company_info])
+    header = Table([[logo_img,company_block]],colWidths=[80,420])
 
-    header_table=Table(header_data,colWidths=[100,400])
-
-    elements.append(header_table)
+    elements.append(header)
     elements.append(Spacer(1,20))
 
 # ---------------- TITLE ----------------
 
-    title_table=Table([["TAX INVOICE"]],colWidths=[500])
+    title_table = Table(
+        [["INVOICE",f"Invoice # {invoice_no}"]],
+        colWidths=[350,150]
+    )
 
     title_table.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(0,0),colors.HexColor("#1f4e79")),
-        ("TEXTCOLOR",(0,0),(0,0),colors.white),
-        ("ALIGN",(0,0),(0,0),"CENTER"),
-        ("FONTSIZE",(0,0),(0,0),16),
-        ("BOTTOMPADDING",(0,0),(0,0),10),
-        ("TOPPADDING",(0,0),(0,0),10)
+        ("FONTNAME",(0,0),(0,0),"Helvetica-Bold"),
+        ("FONTSIZE",(0,0),(0,0),18),
+        ("ALIGN",(1,0),(1,0),"RIGHT")
     ]))
 
     elements.append(title_table)
     elements.append(Spacer(1,20))
 
-# ---------------- CUSTOMER INFO ----------------
+# ---------------- BILL TO ----------------
+
+    bill_to = Table([
+        ["Bill To"],
+        [customer],
+        [contact],
+        [f"GSTIN : {gstin}"]
+    ],colWidths=[500])
+
+    bill_to.setStyle(TableStyle([
+        ("FONTNAME",(0,0),(0,0),"Helvetica-Bold")
+    ]))
+
+    elements.append(bill_to)
+    elements.append(Spacer(1,20))
+
+# ---------------- INVOICE INFO ----------------
+
+    info = Table([
+        ["Invoice Date","Terms","Due Date"],
+        [str(date),"Due on Receipt",str(date)]
+    ],colWidths=[166,166,166])
+
+    info.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1f4e79")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("ALIGN",(0,0),(-1,-1),"CENTER"),
+        ("GRID",(0,0),(-1,-1),1,colors.lightgrey)
+    ]))
+
+    elements.append(info)
+    elements.append(Spacer(1,25))
+
+# ---------------- ITEM TABLE ----------------
+
+    table_data=[["#", "Item Description","Qty","Rate","Amount"]]
+
+    i=1
+    for desc,qty,price in items:
+        table_data.append([i,desc,qty,price,qty*price])
+        i+=1
+
+    item_table=Table(table_data,colWidths=[40,220,70,80,90])
+
+    item_table.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1f4e79")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("GRID",(0,0),(-1,-1),1,colors.lightgrey),
+        ("ALIGN",(2,1),(-1,-1),"CENTER")
+    ]))
+
+    elements.append(item_table)
+    elements.append(Spacer(1,20))
+
+# ---------------- TOTAL SECTION ----------------
+
+    totals=Table([
+        ["Sub Total",subtotal],
+        ["CGST (9%)",cgst],
+        ["SGST (9%)",sgst],
+        ["Transport",transport],
+        ["Total",total]
+    ],colWidths=[350,150])
+
+    totals.setStyle(TableStyle([
+        ("ALIGN",(1,0),(1,-1),"RIGHT"),
+        ("GRID",(0,0),(-1,-1),1,colors.lightgrey),
+        ("BACKGROUND",(0,-1),(-1,-1),colors.whitesmoke),
+        ("FONTNAME",(0,-1),(1,-1),"Helvetica-Bold")
+    ]))
+
+    elements.append(totals)
+
+# ---------------- FOOTER ----------------
+
+    elements.append(Spacer(1,30))
+
+    elements.append(Paragraph("Payment Terms: Due within 15 days",styles["Normal"]))
+    elements.append(Paragraph("Bank: ABC Bank",styles["Normal"]))
+    elements.append(Paragraph("Account No: 1234567890",styles["Normal"]))
+
+    elements.append(Spacer(1,25))
+
+    elements.append(Paragraph("<b>Authorized Signature</b>",styles["Normal"]))
+
+# ---------------- BUILD PDF ----------------
+
+    doc.build(elements)
+
+    buffer.seek(0)
+
+    return buffer# ---------------- CUSTOMER INFO ----------------
 
     info_table=Table([
 
@@ -388,8 +475,8 @@ if page=="Create Invoice":
     total=subtotal+cgst+sgst+transport
 
     st.write("Subtotal:",subtotal)
-    st.write("CGST:",cgst)
-    st.write("SGST:",sgst)
+    st.write("CGST:",0)
+    st.write("SGST:",0)
     st.write("Total:",total)
 
 # Preview
