@@ -475,7 +475,7 @@ if page=="Create Invoice":
     total=subtotal+GST+sgst+transport
 
     st.write("Subtotal:",subtotal)
-    st.write("GST:",0)
+    st.write("GST:",GST)
     st.write("SGST:",0)
     st.write("Total:",total)
 
