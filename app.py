@@ -83,7 +83,7 @@ page = st.sidebar.radio(
 
 def generate_invoice_html(company,address,gst,logo,
 invoice_no,date,customer,contact,gstin,
-items,subtotal,cgst,sgst,transport,total):
+items,subtotal,GST,sgst,transport,total):
 
     rows=""
 
@@ -157,7 +157,7 @@ items,subtotal,cgst,sgst,transport,total):
     {rows}
 
     <tr><td colspan=3>Subtotal</td><td>{subtotal}</td></tr>
-    <tr><td colspan=3>CGST</td><td>{cgst}</td></tr>
+    <tr><td colspan=3>GST</td><td>{GST}</td></tr>
     <tr><td colspan=3>SGST</td><td>{sgst}</td></tr>
     <tr><td colspan=3>Transport</td><td>{transport}</td></tr>
     <tr><td colspan=3><b>Grand Total</b></td><td><b>{total}</b></td></tr>
@@ -176,7 +176,7 @@ items,subtotal,cgst,sgst,transport,total):
 
 def generate_pdf(company,address,gst,logo,
 invoice_no,date,customer,contact,gstin,
-items,subtotal,cgst,sgst,transport,total):
+items,subtotal,GST,sgst,transport,total):
 
     buffer = io.BytesIO()
 
@@ -283,7 +283,7 @@ items,subtotal,cgst,sgst,transport,total):
 
     totals=Table([
         ["Sub Total",subtotal],
-        ["CGST (9%)",cgst],
+        ["GST (18%)",GST],
         ["SGST (9%)",sgst],
         ["Transport",transport],
         ["Total",total]
@@ -343,7 +343,7 @@ items,subtotal,cgst,sgst,transport,total):
         item_data.append([desc,qty,price,qty*price])
 
     item_data.append(["","","Subtotal",subtotal])
-    item_data.append(["","","CGST (9%)",cgst])
+    item_data.append(["","","GST (18%)",GST])
     item_data.append(["","","SGST (9%)",sgst])
     item_data.append(["","","Transport",transport])
     item_data.append(["","","Grand Total",total])
@@ -469,13 +469,13 @@ if page=="Create Invoice":
 
     subtotal=sum(q*p for _,q,p in items)
 
-    cgst=subtotal*0.00
+    GST=subtotal*0.09
     sgst=subtotal*0.00
 
-    total=subtotal+cgst+sgst+transport
+    total=subtotal+GST+sgst+transport
 
     st.write("Subtotal:",subtotal)
-    st.write("CGST:",0)
+    st.write("GST:",0)
     st.write("SGST:",0)
     st.write("Total:",total)
 
@@ -487,7 +487,7 @@ if page=="Create Invoice":
         company,address,gst,logo_path,
         invoice_no,invoice_date,
         customer_name,contact,gstin,
-        items,subtotal,cgst,sgst,transport,total
+        items,subtotal,GST,sgst,transport,total
         )
 
         components.html(html,height=900)
@@ -507,7 +507,7 @@ if page=="Create Invoice":
         company,address,gst,logo_path,
         invoice_no,invoice_date,
         customer_name,contact,gstin,
-        items,subtotal,cgst,sgst,transport,total
+        items,subtotal,GST,sgst,transport,total
         )
 
         st.success("Invoice Created")
