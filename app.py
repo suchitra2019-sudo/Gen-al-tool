@@ -469,8 +469,8 @@ if page=="Create Invoice":
 
     subtotal=sum(q*p for _,q,p in items)
 
-    cgst=subtotal*0.09
-    sgst=subtotal*0.09
+    cgst=subtotal*0.00
+    sgst=subtotal*0.00
 
     total=subtotal+cgst+sgst+transport
 
