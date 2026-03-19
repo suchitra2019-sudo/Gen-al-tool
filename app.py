@@ -284,7 +284,7 @@ items,subtotal,GST,sgst,transport,total):
     totals=Table([
         ["Sub Total",subtotal],
         ["GST (18%)",GST],
-        ["SGST (9%)",sgst],
+        ["SGST ",sgst],
         ["Transport",transport],
         ["Total",total]
     ],colWidths=[350,150])
