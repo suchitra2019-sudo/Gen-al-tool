@@ -366,8 +366,8 @@ items,subtotal,GST,sgst,transport,total):
 
     footer=Table([
         ["Payment Terms: Due within 15 days","","Authorized Signature"],
-        ["Bank: ABC Bank","",""],
-        ["Account No: 1234567890","",""]
+        ["Bank: CENTRAL BANK OF INDIA","",""],
+        ["Account No: 5750792142","",""]
     ],colWidths=[260,140,140])
 
     footer.setStyle(TableStyle([
