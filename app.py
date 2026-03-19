@@ -306,9 +306,16 @@ items,subtotal,GST,sgst,transport,total):
     elements.append(Paragraph("Bank: CENTRAL BANK OF INDIA",styles["Normal"]))
     elements.append(Paragraph("Account No: 5750792142",styles["Normal"]))
 
-    elements.append(Spacer(1,25))
+   elements.append(Spacer(1,30))
 
-    elements.append(Paragraph("<b>Authorized Signature</b>",styles["Normal"]))
+if logo:
+    try:
+        sign_img = Image(logo, width=120, height=50)
+        elements.append(sign_img)
+    except:
+        pass
+
+elements.append(Paragraph("<b>Authorized Signature</b>", styles["Normal"]))
 
 # ---------------- BUILD PDF ----------------
 
@@ -405,6 +412,12 @@ if page=="Create Invoice":
     gst=st.sidebar.text_input("GSTIN","27CFKPP2024L1Z7")
 
     logo_file=st.sidebar.file_uploader("Upload Company Logo")
+    signature_file = st.sidebar.file_uploader("Upload Signature Image", key="sign")
+
+    signature_path = None
+
+   if signature_file:
+    signature_path = signature_file
 
     logo_path=None
 
@@ -484,11 +497,12 @@ if page=="Create Invoice":
     if st.toggle("Show Invoice Preview"):
 
         html=generate_invoice_html(
-        company,address,gst,logo_path,
-        invoice_no,invoice_date,
-        customer_name,contact,gstin,
-        items,subtotal,GST,sgst,transport,total
-        )
+    company,address,gst,logo_path,
+    invoice_no,invoice_date,
+    customer_name,contact,gstin,
+    items,subtotal,GST,sgst,transport,total,
+    signature_path
+)
 
         components.html(html,height=900)
 
@@ -504,11 +518,11 @@ if page=="Create Invoice":
         conn.commit()
 
         pdf=generate_pdf(
-        company,address,gst,logo_path,
-        invoice_no,invoice_date,
-        customer_name,contact,gstin,
-        items,subtotal,GST,sgst,transport,total
-        )
+    company,address,gst,signature_path,
+    invoice_no,invoice_date,
+    customer_name,contact,gstin,
+    items,subtotal,GST,sgst,transport,total
+)
 
         st.success("Invoice Created")
 
