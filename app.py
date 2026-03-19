@@ -302,20 +302,25 @@ items,subtotal,GST,sgst,transport,total):
 
     elements.append(Spacer(1,30))
 
-    elements.append(Paragraph("Payment Terms: Due within 15 days",styles["Normal"]))
-    elements.append(Paragraph("Bank: CENTRAL BANK OF INDIA",styles["Normal"]))
-    elements.append(Paragraph("Account No: 5750792142",styles["Normal"]))
+       # ---------------- FOOTER ----------------
 
-   elements.append(Spacer(1,30))
+    elements.append(Spacer(1, 30))
 
-if logo:
-    try:
-        sign_img = Image(logo, width=120, height=50)
-        elements.append(sign_img)
-    except:
-        pass
+    elements.append(Paragraph("Payment Terms: Due within 15 days", styles["Normal"]))
+    elements.append(Paragraph("Bank: CENTRAL BANK OF INDIA", styles["Normal"]))
+    elements.append(Paragraph("Account No: 5750792142", styles["Normal"]))
 
-elements.append(Paragraph("<b>Authorized Signature</b>", styles["Normal"]))
+    elements.append(Spacer(1, 25))
+
+    # -------- SIGNATURE --------
+    if logo:
+        try:
+            sign_img = Image(logo, width=120, height=50)
+            elements.append(sign_img)
+        except:
+            pass
+
+    elements.append(Paragraph("<b>Authorized Signature</b>", styles["Normal"]))
 
 # ---------------- BUILD PDF ----------------
 
