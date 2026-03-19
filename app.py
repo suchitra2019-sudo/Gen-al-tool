@@ -344,7 +344,7 @@ items,subtotal,GST,sgst,transport,total):
 
     item_data.append(["","","Subtotal",subtotal])
     item_data.append(["","","GST (18%)",GST])
-    item_data.append(["","","SGST (9%)",sgst])
+    item_data.append(["","","SGST",sgst])
     item_data.append(["","","Transport",transport])
     item_data.append(["","","Grand Total",total])
 
