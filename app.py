@@ -303,8 +303,8 @@ items,subtotal,GST,sgst,transport,total):
     elements.append(Spacer(1,30))
 
     elements.append(Paragraph("Payment Terms: Due within 15 days",styles["Normal"]))
-    elements.append(Paragraph("Bank: ABC Bank",styles["Normal"]))
-    elements.append(Paragraph("Account No: 1234567890",styles["Normal"]))
+    elements.append(Paragraph("Bank: CENTRAL BANK OF INDIA",styles["Normal"]))
+    elements.append(Paragraph("Account No: 5750792142",styles["Normal"]))
 
     elements.append(Spacer(1,25))
 
