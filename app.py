@@ -194,10 +194,10 @@ items,subtotal,GST,sgst,transport,total):
 
 # ---------------- HEADER ----------------
 
-    if logo:
-        logo_img = Image(logo,width=60,height=60)
-    else:
-        logo_img = ""
+if logo and os.path.exists(logo):
+    logo_img = Image(logo, width=60, height=60)
+else:
+    logo_img = Spacer(1,1)
 
     company_block = Paragraph(
         f"<b>{company}</b><br/>{address}<br/>GSTIN : {gst}",
@@ -404,12 +404,7 @@ if page=="Create Invoice":
     address=st.sidebar.text_area("Address","HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI, DIST-THANE")
     gst=st.sidebar.text_input("GSTIN","27CFKPP2024L1Z7")
 
-    logo_file=st.sidebar.file_uploader("Upload Company Logo")
-
-    logo_path=None
-
-    if logo_file:
-        logo_path=logo_file
+    logo_path = st.text_input("Logo Path", "logo.png")
 
 # Customer
 
