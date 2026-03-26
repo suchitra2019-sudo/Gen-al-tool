@@ -211,18 +211,19 @@ items,subtotal,GST,sgst,transport,total):
 
 # ---------------- TITLE ----------------
 
-    title_table = Table(
-        [["INVOICE",f"Invoice # {invoice_no}"]],
-        colWidths=[350,150]
-    )
+  # ---------------- TITLE ----------------
+title_table = Table(
+    [["INVOICE", f"Invoice # {invoice_no}"]],
+    colWidths=[350,150]
+)
 
-    title_table.setStyle(TableStyle([
-        ("FONTNAME",(0,0),(0,0),"Helvetica-Bold"),
-        ("FONTSIZE",(0,0),(0,0),18),
-        ("ALIGN",(1,0),(1,0),"RIGHT")
-    ]))
+title_table.setStyle(TableStyle([
+    ("FONTNAME",(0,0),(0,0),"Helvetica-Bold"),
+    ("FONTSIZE",(0,0),(0,0),18),
+    ("ALIGN",(1,0),(1,0),"RIGHT")
+]))
 
- elements.append(title_table)
+elements.append(title_table)
 elements.append(Spacer(1,20))
 
 # ---------------- BILL TO ----------------
