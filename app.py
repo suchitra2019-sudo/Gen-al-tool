@@ -130,8 +130,9 @@ if page=="Create Invoice":
 
     # Company
     company=st.text_input("Company Name", "SHIVKRUTI ENTERPRISES", key="company_name")
-    address=st.text_area("Address", key="company_address")
-    gst=st.text_input("Company GSTIN", key="company_gstin")
+    address=st.text_area("Address", "HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI,
+    DIST-THANE",key="company_address")
+    gst=st.text_input("Company GSTIN", "27CFKPP2024L1Z7", key="company_gstin")
 
     # Customer
     customers=pd.read_sql("SELECT * FROM customers",conn)
