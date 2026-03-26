@@ -195,9 +195,9 @@ items,subtotal,GST,sgst,transport,total):
 # ---------------- HEADER ----------------
 
 if logo and os.path.exists(logo):
-    logo_img = Image(logo, width=60, height=60)
-else:
-    logo_img = Spacer(1,1)
+        logo_img = Image(logo, width=60, height=60)
+    else:
+        logo_img = Spacer(1,1)
 
     company_block = Paragraph(
         f"<b>{company}</b><br/>{address}<br/>GSTIN : {gst}",
@@ -227,7 +227,7 @@ else:
 
 # ---------------- BILL TO ----------------
 
-    bill_to = Table([
+     bill_to = Table([
         ["Bill To"],
         [customer],
         [contact],
@@ -243,7 +243,7 @@ else:
 
 # ---------------- INVOICE INFO ----------------
 
-    info = Table([
+  info = Table([
         ["Invoice Date","Terms","Due Date"],
         [str(date),"Due on Receipt",str(date)]
     ],colWidths=[166,166,166])
@@ -260,7 +260,7 @@ else:
 
 # ---------------- ITEM TABLE ----------------
 
-    table_data=[["#", "Item Description","Qty","Rate","Amount"]]
+      table_data=[["#", "Item Description","Qty","Rate","Amount"]]
 
     i=1
     for desc,qty,price in items:
@@ -281,7 +281,7 @@ else:
 
 # ---------------- TOTAL SECTION ----------------
 
-    totals=Table([
+   totals=Table([
         ["Sub Total",subtotal],
         ["GST (18%)",GST],
         ["SGST ",sgst],
@@ -297,18 +297,15 @@ else:
     ]))
 
     elements.append(totals)
-
 # ---------------- FOOTER ----------------
 
-    elements.append(Spacer(1,30))
-
+   elements.append(Spacer(1,30))
     elements.append(Paragraph("Payment Terms: Due within 15 days",styles["Normal"]))
     elements.append(Paragraph("Bank: CENTRAL BANK OF INDIA",styles["Normal"]))
     elements.append(Paragraph("Account No: 5750792142",styles["Normal"]))
-
     elements.append(Spacer(1,25))
-
     elements.append(Paragraph("<b>Authorized Signature</b>",styles["Normal"]))
+
 
 # ---------------- BUILD PDF ----------------
 
