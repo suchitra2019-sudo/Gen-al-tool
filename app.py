@@ -194,7 +194,7 @@ items,subtotal,GST,sgst,transport,total):
 
 # ---------------- HEADER ----------------
 
-if logo and os.path.exists(logo):
+    if logo and os.path.exists(logo):
         logo_img = Image(logo, width=60, height=60)
     else:
         logo_img = Spacer(1,1)
