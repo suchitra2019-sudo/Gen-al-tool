@@ -234,29 +234,29 @@ bill_to = Table([
     [f"GSTIN : {gstin}"]
 ], colWidths=[500])
 
-    bill_to.setStyle(TableStyle([
+bill_to.setStyle(TableStyle([
         ("FONTNAME",(0,0),(0,0),"Helvetica-Bold")
     ]))
 
-    elements.append(bill_to)
-    elements.append(Spacer(1,20))
+elements.append(bill_to)
+elements.append(Spacer(1,20))
 
 # ---------------- INVOICE INFO ----------------
 
-  info = Table([
+info = Table([
         ["Invoice Date","Terms","Due Date"],
         [str(date),"Due on Receipt",str(date)]
     ],colWidths=[166,166,166])
 
-    info.setStyle(TableStyle([
+info.setStyle(TableStyle([
         ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1f4e79")),
         ("TEXTCOLOR",(0,0),(-1,0),colors.white),
         ("ALIGN",(0,0),(-1,-1),"CENTER"),
         ("GRID",(0,0),(-1,-1),1,colors.lightgrey)
     ]))
 
-    elements.append(info)
-    elements.append(Spacer(1,25))
+elements.append(info)
+elements.append(Spacer(1,25))
 
 # ---------------- ITEM TABLE ----------------
 
