@@ -222,17 +222,16 @@ items,subtotal,GST,sgst,transport,total):
         ("ALIGN",(1,0),(1,0),"RIGHT")
     ]))
 
-    elements.append(title_table)
-    elements.append(Spacer(1,20))
+ elements.append(title_table)
+elements.append(Spacer(1,20))
 
 # ---------------- BILL TO ----------------
-
-     bill_to = Table([
-        ["Bill To"],
-        [customer],
-        [contact],
-        [f"GSTIN : {gstin}"]
-    ],colWidths=[500])
+bill_to = Table([
+    ["Bill To"],
+    [customer],
+    [contact],
+    [f"GSTIN : {gstin}"]
+], colWidths=[500])
 
     bill_to.setStyle(TableStyle([
         ("FONTNAME",(0,0),(0,0),"Helvetica-Bold")
