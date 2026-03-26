@@ -316,7 +316,7 @@ else:
 
     buffer.seek(0)
 
-    return buffer# ---------------- CUSTOMER INFO ----------------
+    return buffer
 
     info_table=Table([
 
