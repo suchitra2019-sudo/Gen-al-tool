@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import streamlit.components.v1 as components
 from datetime import date
 import io
 
@@ -17,7 +16,6 @@ st.set_page_config(page_title="GST Billing Software", layout="wide")
 conn = sqlite3.connect("billing.db", check_same_thread=False)
 cursor = conn.cursor()
 
-# Customers
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS customers(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,7 +24,6 @@ contact TEXT,
 gstin TEXT)
 """)
 
-# Products
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS products(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,7 +31,6 @@ name TEXT,
 price REAL)
 """)
 
-# Invoices (UPDATED)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS invoices(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +44,6 @@ transport REAL,
 total REAL)
 """)
 
-# Invoice Items (NEW)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS invoice_items(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +66,7 @@ page = st.sidebar.radio(
 )
 
 # ====================================================
-# PDF GENERATOR (FIXED)
+# PDF GENERATOR
 # ====================================================
 
 def generate_pdf(company,address,gst,logo,
@@ -79,7 +74,6 @@ invoice_no,date,customer,contact,gstin,
 items,subtotal,GST,sgst,transport,total):
 
     buffer = io.BytesIO()
-
     doc = SimpleDocTemplate(buffer, pagesize=A4)
 
     styles = getSampleStyleSheet()
@@ -120,7 +114,6 @@ items,subtotal,GST,sgst,transport,total):
 
     return buffer
 
-
 # ====================================================
 # CREATE INVOICE
 # ====================================================
@@ -136,51 +129,51 @@ if page=="Create Invoice":
     st.subheader(f"Invoice No : {invoice_no}")
 
     # Company
-    company=st.text_input("Company Name","SHIVKRUTI ENTERPRISES")
-    address=st.text_area("Address")
-    gst=st.text_input("GSTIN")
+    company=st.text_input("Company Name", "SHIVKRUTI ENTERPRISES", key="company_name")
+    address=st.text_area("Address", key="company_address")
+    gst=st.text_input("Company GSTIN", key="company_gstin")
 
     # Customer
     customers=pd.read_sql("SELECT * FROM customers",conn)
 
     if not customers.empty:
-        customer_name=st.selectbox("Customer",customers["name"])
+        customer_name=st.selectbox("Customer",customers["name"], key="customer_select")
         cust=customers[customers["name"]==customer_name].iloc[0]
         contact=cust["contact"]
         gstin=cust["gstin"]
     else:
-        customer_name=st.text_input("Customer")
-        contact=st.text_input("Contact")
-        gstin=st.text_input("GSTIN")
+        customer_name=st.text_input("Customer Name", key="cust_name")
+        contact=st.text_input("Contact", key="cust_contact")
+        gstin=st.text_input("Customer GSTIN", key="customer_gstin")
 
-    invoice_date=st.date_input("Date",date.today())
+    invoice_date=st.date_input("Date", date.today(), key="invoice_date")
 
     # Products
     products=pd.read_sql("SELECT * FROM products",conn)
 
     items=[]
-    rows=st.number_input("Items",1,10,1)
+    rows=st.number_input("Items",1,10,1, key="num_items")
 
     for i in range(int(rows)):
         col1,col2,col3=st.columns(3)
 
         with col1:
             if not products.empty:
-                product=st.selectbox(f"Product {i+1}",products["name"],key=i)
+                product=st.selectbox(f"Product {i+1}",products["name"],key=f"prod_{i}")
                 price=products[products["name"]==product]["price"].values[0]
             else:
-                product=st.text_input(f"Item {i+1}")
-                price=st.number_input(f"Price {i+1}")
+                product=st.text_input(f"Item {i+1}", key=f"item_{i}")
+                price=st.number_input(f"Price {i+1}", key=f"price_{i}")
 
         with col2:
-            qty=st.number_input(f"Qty {i+1}",1)
+            qty=st.number_input(f"Qty {i+1}",1, key=f"qty_{i}")
 
         with col3:
             st.write(price)
 
         items.append((product,qty,price))
 
-    transport=st.number_input("Transport",0.0)
+    transport=st.number_input("Transport",0.0, key="transport")
 
     subtotal=sum(q*p for _,q,p in items)
     GST=subtotal*0.09
@@ -189,10 +182,8 @@ if page=="Create Invoice":
 
     st.write("Total:",total)
 
-    # SAVE
-    if st.button("Generate Invoice"):
+    if st.button("Generate Invoice", key="generate_btn"):
 
-        # Save invoice
         cursor.execute("""
         INSERT INTO invoices 
         (invoice_no,customer,date,subtotal,gst,sgst,transport,total)
@@ -200,7 +191,6 @@ if page=="Create Invoice":
         """,(invoice_no,customer_name,str(invoice_date),
              subtotal,GST,sgst,transport,total))
 
-        # Save items
         for d,q,p in items:
             cursor.execute("""
             INSERT INTO invoice_items 
@@ -233,9 +223,9 @@ elif page=="Invoice History":
     df=pd.read_sql("SELECT * FROM invoices",conn)
     st.dataframe(df)
 
-    inv=st.number_input("Enter Invoice No")
+    inv=st.number_input("Enter Invoice No", key="view_invoice")
 
-    if st.button("View Items"):
+    if st.button("View Items", key="view_btn"):
         items_df=pd.read_sql(
         f"SELECT * FROM invoice_items WHERE invoice_no={inv}",conn)
         st.dataframe(items_df)
@@ -246,13 +236,19 @@ elif page=="Invoice History":
 
 elif page=="Customer Master":
 
-    name=st.text_input("Name")
-    contact=st.text_input("Contact")
-    gstin=st.text_input("GSTIN")
+    st.title("Customer Master")
 
-    if st.button("Add"):
-        cursor.execute("INSERT INTO customers VALUES(NULL,?,?,?)",(name,contact,gstin))
+    name=st.text_input("Customer Name", key="cm_name")
+    contact=st.text_input("Contact", key="cm_contact")
+    gstin=st.text_input("GSTIN", key="cm_gstin")
+
+    if st.button("Add Customer", key="cm_btn"):
+        cursor.execute(
+        "INSERT INTO customers (name,contact,gstin) VALUES (?,?,?)",
+        (name,contact,gstin)
+        )
         conn.commit()
+        st.success("Customer Added")
 
 # ====================================================
 # PRODUCT MASTER
@@ -260,9 +256,15 @@ elif page=="Customer Master":
 
 elif page=="Product Master":
 
-    name=st.text_input("Product")
-    price=st.number_input("Price")
+    st.title("Product Master")
 
-    if st.button("Add"):
-        cursor.execute("INSERT INTO products VALUES(NULL,?,?)",(name,price))
+    name=st.text_input("Product Name", key="pm_name")
+    price=st.number_input("Price", key="pm_price")
+
+    if st.button("Add Product", key="pm_btn"):
+        cursor.execute(
+        "INSERT INTO products (name,price) VALUES (?,?)",
+        (name,price)
+        )
         conn.commit()
+        st.success("Product Added")
