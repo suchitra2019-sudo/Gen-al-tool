@@ -262,7 +262,7 @@ elements.append(Spacer(1,25))
 
 table_data=[["#", "Item Description","Qty","Rate","Amount"]]
 
-    i=1
+i=1
     for desc,qty,price in items:
         table_data.append([i,desc,qty,price,qty*price])
         i+=1
@@ -290,6 +290,115 @@ item_table=Table(table_data,colWidths=[40,220,70,80,90])
     ],colWidths=[350,150])
 
     totals.setStyle(TableStyle([
+     def generate_pdf(company,address,gst,logo,
+invoice_no,date,customer,contact,gstin,
+items,subtotal,GST,sgst,transport,total):
+
+    buffer = io.BytesIO()
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
+    )
+
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # ---------------- HEADER ----------------
+    if logo and os.path.exists(logo):
+        logo_img = Image(logo, width=60, height=60)
+    else:
+        logo_img = Spacer(1,1)
+
+    company_block = Paragraph(
+        f"<b>{company}</b><br/>{address}<br/>GSTIN : {gst}",
+        styles["Normal"]
+    )
+
+    header = Table([[logo_img, company_block]], colWidths=[80, 420])
+    elements.append(header)
+    elements.append(Spacer(1, 20))
+
+    # ---------------- TITLE ----------------
+    title_table = Table(
+        [["INVOICE", f"Invoice # {invoice_no}"]],
+        colWidths=[350, 150]
+    )
+
+    title_table.setStyle(TableStyle([
+        ("FONTNAME",(0,0),(0,0),"Helvetica-Bold"),
+        ("FONTSIZE",(0,0),(0,0),18),
+        ("ALIGN",(1,0),(1,0),"RIGHT")
+    ]))
+
+    elements.append(title_table)
+    elements.append(Spacer(1, 20))
+
+    # ---------------- BILL TO ----------------
+    bill_to = Table([
+        ["Bill To"],
+        [customer],
+        [contact],
+        [f"GSTIN : {gstin}"]
+    ], colWidths=[500])
+
+    bill_to.setStyle(TableStyle([
+        ("FONTNAME",(0,0),(0,0),"Helvetica-Bold")
+    ]))
+
+    elements.append(bill_to)
+    elements.append(Spacer(1, 20))
+
+    # ---------------- INVOICE INFO ----------------
+    info = Table([
+        ["Invoice Date","Terms","Due Date"],
+        [str(date),"Due on Receipt",str(date)]
+    ], colWidths=[166,166,166])
+
+    info.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1f4e79")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("ALIGN",(0,0),(-1,-1),"CENTER"),
+        ("GRID",(0,0),(-1,-1),1,colors.lightgrey)
+    ]))
+
+    elements.append(info)
+    elements.append(Spacer(1, 25))
+
+    # ---------------- ITEM TABLE ----------------
+    table_data = [["#", "Item Description","Qty","Rate","Amount"]]
+
+    i = 1
+    for desc, qty, price in items:
+        table_data.append([i, desc, qty, price, qty * price])
+        i += 1
+
+    item_table = Table(table_data, colWidths=[40,220,70,80,90])
+
+    item_table.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1f4e79")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("GRID",(0,0),(-1,-1),1,colors.lightgrey),
+        ("ALIGN",(2,1),(-1,-1),"CENTER")
+    ]))
+
+    elements.append(item_table)
+    elements.append(Spacer(1, 20))
+
+    # ---------------- TOTAL SECTION ----------------
+    totals = Table([
+        ["Sub Total", subtotal],
+        ["GST (18%)", GST],
+        ["SGST", sgst],
+        ["Transport", transport],
+        ["Total", total]
+    ], colWidths=[350,150])
+
+    totals.setStyle(TableStyle([
         ("ALIGN",(1,0),(1,-1),"RIGHT"),
         ("GRID",(0,0),(-1,-1),1,colors.lightgrey),
         ("BACKGROUND",(0,-1),(-1,-1),colors.whitesmoke),
@@ -297,24 +406,20 @@ item_table=Table(table_data,colWidths=[40,220,70,80,90])
     ]))
 
     elements.append(totals)
-# ---------------- FOOTER ----------------
 
-   elements.append(Spacer(1,30))
-    elements.append(Paragraph("Payment Terms: Due within 15 days",styles["Normal"]))
-    elements.append(Paragraph("Bank: CENTRAL BANK OF INDIA",styles["Normal"]))
-    elements.append(Paragraph("Account No: 5750792142",styles["Normal"]))
+    # ---------------- FOOTER ----------------
+    elements.append(Spacer(1,30))
+    elements.append(Paragraph("Payment Terms: Due within 15 days", styles["Normal"]))
+    elements.append(Paragraph("Bank: CENTRAL BANK OF INDIA", styles["Normal"]))
+    elements.append(Paragraph("Account No: 5750792142", styles["Normal"]))
     elements.append(Spacer(1,25))
-    elements.append(Paragraph("<b>Authorized Signature</b>",styles["Normal"]))
+    elements.append(Paragraph("<b>Authorized Signature</b>", styles["Normal"]))
 
-
-# ---------------- BUILD PDF ----------------
-
+    # ---------------- BUILD PDF ----------------
     doc.build(elements)
 
     buffer.seek(0)
-
     return buffer
-
     info_table=Table([
 
         ["Invoice No",invoice_no,"Invoice Date",str(date)],
