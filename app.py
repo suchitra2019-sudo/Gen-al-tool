@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-import streamlit.components.v1 as components
 from datetime import date
 import io
 
@@ -48,7 +47,8 @@ date TEXT)
 conn.commit()
 
 # ---------------- SIDEBAR ----------------
-st.sidebar.title("Billing Menu")
+st.sidebar.title("⚙️ Settings")
+
 page = st.sidebar.radio("Navigation", [
     "Create Invoice",
     "Invoice History",
@@ -56,14 +56,29 @@ page = st.sidebar.radio("Navigation", [
     "Product Master"
 ])
 
+# -------- COMPANY SETTINGS --------
+st.sidebar.subheader("🏢 Company Details")
+
+company = st.sidebar.text_input("Company Name", "SHIVKRUTI ENTERPRISES")
+address = st.sidebar.text_area("Address")
+gst = st.sidebar.text_input("GSTIN")
+
+logo_file = st.sidebar.file_uploader("Upload Logo", type=["png", "jpg", "jpeg"])
+
 # ---------------- PDF FUNCTION ----------------
-def generate_pdf(company,address,gst,invoice_no,invoice_date,
-customer,contact,gstin,items,subtotal,gst_amt,total):
+def generate_pdf(company, address, gst, logo_file,
+                 invoice_no, invoice_date,
+                 customer, contact, gstin,
+                 items, subtotal, gst_amt, total):
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
     elements = []
+
+    # LOGO
+    if logo_file:
+        elements.append(Image(logo_file, width=80, height=80))
 
     elements.append(Paragraph(f"<b>{company}</b>", styles["Title"]))
     elements.append(Paragraph(address, styles["Normal"]))
@@ -85,7 +100,7 @@ customer,contact,gstin,items,subtotal,gst_amt,total):
         table_data.append([item, qty, rate, qty * rate])
 
     table_data.append(["", "", "Subtotal", subtotal])
-    table_data.append(["", "", "GST", gst_amt])
+    table_data.append(["", "", "GST (18%)", gst_amt])
     table_data.append(["", "", "Total", total])
 
     table = Table(table_data)
@@ -94,6 +109,7 @@ customer,contact,gstin,items,subtotal,gst_amt,total):
     ]))
 
     elements.append(table)
+
     doc.build(elements)
     buffer.seek(0)
 
@@ -112,11 +128,6 @@ if page == "Create Invoice":
     invoice_no = 1001 if result[0] is None else result[0] + 1
 
     st.subheader(f"Invoice No: {invoice_no}")
-
-    # Company
-    company = st.text_input("Company Name", "SHIVKRUTI ENTERPRISES")
-    address = st.text_area("Address")
-    gst = st.text_input("Company GSTIN")
 
     # Customer
     customers = pd.read_sql("SELECT * FROM customers", conn)
@@ -180,7 +191,7 @@ if page == "Create Invoice":
         conn.commit()
 
         pdf = generate_pdf(
-            company, address, gst,
+            company, address, gst, logo_file,
             invoice_no, invoice_date,
             customer_name, contact, gstin,
             items, subtotal, gst_amt, total
