@@ -1,11 +1,8 @@
-# ================= IMPORT =================
 import streamlit as st
 import pandas as pd
 import sqlite3
-import streamlit.components.v1 as components
 from datetime import date
 import io
-import os
 
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
@@ -28,11 +25,17 @@ name TEXT, price REAL)""")
 
 cursor.execute("""CREATE TABLE IF NOT EXISTS invoices(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
-invoice_no INTEGER, customer TEXT, date TEXT, total REAL)""")
+invoice_no INTEGER,
+customer TEXT,
+date TEXT,
+total REAL)""")
 
 cursor.execute("""CREATE TABLE IF NOT EXISTS company(
 id INTEGER PRIMARY KEY,
-name TEXT, address TEXT, gst TEXT, logo TEXT)""")
+name TEXT,
+address TEXT,
+gst TEXT,
+logo TEXT)""")
 
 conn.commit()
 
@@ -59,7 +62,6 @@ page = st.sidebar.radio(
     ["Create Invoice", "Invoice History", "Customer Master", "Product Master", "Company Settings"]
 )
 
-# ✅ READ ONLY COMPANY DISPLAY
 st.sidebar.header("Company Details")
 st.sidebar.markdown(f"**{company}**")
 st.sidebar.write(address)
@@ -117,12 +119,10 @@ if page == "Create Invoice":
 
     cursor.execute("SELECT MAX(invoice_no) FROM invoices")
     result = cursor.fetchone()
-
     invoice_no = 1001 if result[0] is None else result[0] + 1
 
     st.subheader(f"Invoice No: {invoice_no}")
 
-    # Customer
     customers = pd.read_sql("SELECT * FROM customers", conn)
 
     if not customers.empty:
@@ -137,7 +137,6 @@ if page == "Create Invoice":
 
     invoice_date = st.date_input("Date", date.today())
 
-    # Products
     products = pd.read_sql("SELECT * FROM products", conn)
 
     items = []
@@ -171,10 +170,12 @@ if page == "Create Invoice":
     st.write("Total:", total)
 
     if st.button("Generate Invoice"):
+
         cursor.execute(
-            "INSERT INTO invoices VALUES (NULL,?,?,?,?)",
+            "INSERT INTO invoices (invoice_no, customer, date, total) VALUES (?,?,?,?)",
             (invoice_no, customer_name, str(invoice_date), total)
         )
+
         conn.commit()
 
         pdf = generate_pdf(
@@ -184,7 +185,56 @@ if page == "Create Invoice":
             items,subtotal,GST,0,transport,total
         )
 
-        st.download_button("Download PDF", pdf, file_name="invoice.pdf")
+        st.success("Invoice Created")
+
+        st.download_button("Download PDF", pdf, file_name=f"invoice_{invoice_no}.pdf")
+
+# ================= CUSTOMER MASTER =================
+elif page == "Customer Master":
+
+    st.title("Customer Master")
+
+    name = st.text_input("Customer Name")
+    contact = st.text_input("Contact")
+    gstin = st.text_input("GSTIN")
+
+    if st.button("Add Customer"):
+        cursor.execute(
+            "INSERT INTO customers (name,contact,gstin) VALUES (?,?,?)",
+            (name,contact,gstin)
+        )
+        conn.commit()
+        st.success("Customer Added")
+
+    df = pd.read_sql("SELECT * FROM customers", conn)
+    st.dataframe(df)
+
+# ================= PRODUCT MASTER =================
+elif page == "Product Master":
+
+    st.title("Product Master")
+
+    name = st.text_input("Product Name")
+    price = st.number_input("Price")
+
+    if st.button("Add Product"):
+        cursor.execute(
+            "INSERT INTO products (name,price) VALUES (?,?)",
+            (name,price)
+        )
+        conn.commit()
+        st.success("Product Added")
+
+    df = pd.read_sql("SELECT * FROM products", conn)
+    st.dataframe(df)
+
+# ================= INVOICE HISTORY =================
+elif page == "Invoice History":
+
+    st.title("Invoice History")
+
+    df = pd.read_sql("SELECT * FROM invoices", conn)
+    st.dataframe(df)
 
 # ================= COMPANY SETTINGS =================
 elif page == "Company Settings":
@@ -206,8 +256,11 @@ elif page == "Company Settings":
                 f.write(logo.getbuffer())
 
         cursor.execute("DELETE FROM company")
-        cursor.execute("INSERT INTO company VALUES (1,?,?,?,?)",
-                       (name, addr, gstin, path))
-        conn.commit()
 
+        cursor.execute(
+            "INSERT INTO company (id,name,address,gst,logo) VALUES (1,?,?,?,?)",
+            (name, addr, gstin, path)
+        )
+
+        conn.commit()
         st.success("Saved Successfully")
