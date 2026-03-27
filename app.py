@@ -31,8 +31,11 @@ name TEXT,
 price REAL)
 """)
 
+# FORCE FIX TABLE STRUCTURE
+cursor.execute("DROP TABLE IF EXISTS invoices")
+
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS invoices(
+CREATE TABLE invoices(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 invoice_no INTEGER,
 customer TEXT,
@@ -45,7 +48,6 @@ date TEXT)
 """)
 
 conn.commit()
-
 # ---------------- SIDEBAR ----------------
 st.sidebar.title("⚙️ Settings")
 
