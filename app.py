@@ -263,9 +263,9 @@ elements.append(Spacer(1,25))
 table_data=[["#", "Item Description","Qty","Rate","Amount"]]
 
 i=1
-    for desc,qty,price in items:
-        table_data.append([i,desc,qty,price,qty*price])
-        i+=1
+for desc,qty,price in items:
+table_data.append([i,desc,qty,price,qty*price])
+i+=1
 
 item_table=Table(table_data,colWidths=[40,220,70,80,90])
 
