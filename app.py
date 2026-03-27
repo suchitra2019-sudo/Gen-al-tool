@@ -61,6 +61,17 @@ date TEXT,
 total REAL)
 """)
 
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS company(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+name TEXT,
+address TEXT,
+gstin TEXT
+)
+""")
+
+conn.commit()
+
 conn.commit()
 
 # ---------------- SIDEBAR ----------------
@@ -73,10 +84,10 @@ page = st.sidebar.radio(
 "Create Invoice",
 "Invoice History",
 "Customer Master",
-"Product Master"
+"Product Master",
+"Company Settings"  
 ]
 )
-
 # ====================================================
 # HTML INVOICE TEMPLATE
 # ====================================================
@@ -399,10 +410,17 @@ if page=="Create Invoice":
     st.subheader(f"Invoice No : {invoice_no}")
 
     st.sidebar.header("Company Settings")
+    company_df = pd.read_sql("SELECT * FROM company", conn)
 
-    company=st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
-    address=st.sidebar.text_area("Address","HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI, DIST-THANE")
-    gst=st.sidebar.text_input("GSTIN","27CFKPP2024L1Z7")
+if not company_df.empty:
+    company = company_df.iloc[0]["name"]
+    address = company_df.iloc[0]["address"]
+    gst = company_df.iloc[0]["gstin"]
+else:
+    company = st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
+    address = st.sidebar.text_area("Address","HOUSE NO-301...")
+    gst = st.sidebar.text_input("GSTIN","27CFKPP2024L1Z7")
+
 
     logo_file=st.sidebar.file_uploader("Upload Company Logo")
 
@@ -593,3 +611,33 @@ elif page=="Invoice History":
         conn.commit()
 
         st.success("Invoice Deleted")
+
+-- Company
+elif page=="Company Settings":
+
+    st.title("Company Settings")
+
+    # Fetch existing company
+    df = pd.read_sql("SELECT * FROM company", conn)
+
+    if not df.empty:
+        company_name = st.text_input("Company Name", df.iloc[0]["name"])
+        address = st.text_area("Address", df.iloc[0]["address"])
+        gst = st.text_input("GSTIN", df.iloc[0]["gstin"])
+    else:
+        company_name = st.text_input("Company Name")
+        address = st.text_area("Address")
+        gst = st.text_input("GSTIN")
+
+    if st.button("Save Company Details"):
+
+        cursor.execute("DELETE FROM company")
+
+        cursor.execute(
+            "INSERT INTO company (name,address,gstin) VALUES (?,?,?)",
+            (company_name,address,gst)
+        )
+
+        conn.commit()
+
+        st.success("Company Details Saved")
