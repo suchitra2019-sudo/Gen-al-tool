@@ -61,6 +61,24 @@ date TEXT,
 total REAL)
 """)
 
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS company(
+id INTEGER PRIMARY KEY,
+name TEXT,
+address TEXT,
+gst TEXT,
+logo TEXT)
+""")
+
+cursor.execute("SELECT COUNT(*) FROM company")
+if cursor.fetchone()[0] == 0:
+    cursor.execute("""
+    INSERT INTO company (id,name,address,gst,logo)
+    VALUES (1,'SHIVKRUTI ENTERPRISES',
+    'HOUSE NO-301, VAJRESHWARI ROAD...',
+    '27CFKPP2024L1Z7',
+    'logo.png')
+    """)
 conn.commit()
 
 # ---------------- SIDEBAR ----------------
