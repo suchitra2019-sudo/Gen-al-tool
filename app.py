@@ -260,14 +260,14 @@ elements.append(Spacer(1,25))
 
 # ---------------- ITEM TABLE ----------------
 
-      table_data=[["#", "Item Description","Qty","Rate","Amount"]]
+table_data=[["#", "Item Description","Qty","Rate","Amount"]]
 
     i=1
     for desc,qty,price in items:
         table_data.append([i,desc,qty,price,qty*price])
         i+=1
 
-    item_table=Table(table_data,colWidths=[40,220,70,80,90])
+item_table=Table(table_data,colWidths=[40,220,70,80,90])
 
     item_table.setStyle(TableStyle([
         ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#1f4e79")),
