@@ -414,9 +414,9 @@ if page=="Create Invoice":
 
    st.sidebar.header("Company Details")
 
-st.sidebar.markdown(f"**{company}**")
-st.sidebar.write(address)
-st.sidebar.write(f"GSTIN: {gst}")
+   st.sidebar.markdown(f"**{company}**")
+   st.sidebar.write(address)
+   st.sidebar.write(f"GSTIN: {gst}")
 
 if logo_path:
     st.sidebar.image(logo_path, width=120)
