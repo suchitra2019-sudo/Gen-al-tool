@@ -61,6 +61,17 @@ date TEXT,
 total REAL)
 """)
 
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS company(
+id INTEGER PRIMARY KEY,
+name TEXT,
+address TEXT,
+gst TEXT,
+logo TEXT
+)
+""")
+
+
 conn.commit()
 
 # ---------------- SIDEBAR ----------------
@@ -73,7 +84,8 @@ page = st.sidebar.radio(
 "Create Invoice",
 "Invoice History",
 "Customer Master",
-"Product Master"
+"Product Master",
+"Company Settings"   
 ]
 )
 
@@ -400,16 +412,14 @@ if page=="Create Invoice":
 
     st.sidebar.header("Company Settings")
 
-    company=st.sidebar.text_input("Company Name","SHIVKRUTI ENTERPRISES")
-    address=st.sidebar.text_area("Address","HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI, DIST-THANE")
-    gst=st.sidebar.text_input("GSTIN","27CFKPP2024L1Z7")
+   st.sidebar.header("Company Details")
 
-    logo_file=st.sidebar.file_uploader("Upload Company Logo")
+st.sidebar.markdown(f"**{company}**")
+st.sidebar.write(address)
+st.sidebar.write(f"GSTIN: {gst}")
 
-    logo_path=None
-
-    if logo_file:
-        logo_path=logo_file
+if logo_path:
+    st.sidebar.image(logo_path, width=120)
 
 # Customer
 
@@ -519,6 +529,20 @@ if page=="Create Invoice":
         mime="application/pdf"
         )
 
+cursor.execute("SELECT * FROM company LIMIT 1")
+company_data = cursor.fetchone()
+
+if company_data:
+    company = company_data[1]
+    address = company_data[2]
+    gst = company_data[3]
+    logo_path = company_data[4]
+else:
+    company = "Not Set"
+    address = ""
+    gst = ""
+    logo_path = None
+
 # ====================================================
 # CUSTOMER MASTER
 # ====================================================
@@ -593,3 +617,48 @@ elif page=="Invoice History":
         conn.commit()
 
         st.success("Invoice Deleted")
+
+# ====================================================
+# Company Setting 
+# ====================================================
+elif page == "Company Settings":
+
+    st.title("Company Settings")
+
+    cursor.execute("SELECT * FROM company LIMIT 1")
+    data = cursor.fetchone()
+
+    if data:
+        name_default = data[1]
+        address_default = data[2]
+        gst_default = data[3]
+    else:
+        name_default = ""
+        address_default = ""
+        gst_default = ""
+
+    name = st.text_input("Company Name", name_default)
+    address = st.text_area("Address", address_default)
+    gst = st.text_input("GSTIN", gst_default)
+
+    logo_file = st.file_uploader("Upload Logo")
+
+    if st.button("Save Company Details"):
+
+        logo_path = None
+
+        if logo_file:
+            logo_path = f"logo_{logo_file.name}"
+            with open(logo_path, "wb") as f:
+                f.write(logo_file.getbuffer())
+
+        cursor.execute("DELETE FROM company")
+
+        cursor.execute(
+            "INSERT INTO company (name,address,gst,logo) VALUES (?,?,?,?)",
+            (name, address, gst, logo_path)
+        )
+
+        conn.commit()
+
+        st.success("Company Details Saved")
