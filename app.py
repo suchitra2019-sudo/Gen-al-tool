@@ -26,9 +26,10 @@ cursor.execute("""CREATE TABLE IF NOT EXISTS products(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
 name TEXT, price REAL)""")
 
-cursor.execute("""CREATE TABLE IF NOT EXISTS invoices(
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-invoice_no INTEGER, customer TEXT, date TEXT, total REAL)""")
+cursor.execute(
+    "INSERT INTO invoices VALUES (NULL,?,?,?,?)",
+    (invoice_no, customer_name, str(invoice_date), total)
+)
 
 cursor.execute("""CREATE TABLE IF NOT EXISTS company(
 id INTEGER PRIMARY KEY,
