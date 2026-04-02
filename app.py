@@ -613,7 +613,7 @@ elif page=="Invoice History":
         st.success("Invoice Deleted")
 
 -- Company
-elif page=="Company Settings":
+if page=="Company Settings":
 
     st.title("Company Settings")
 
