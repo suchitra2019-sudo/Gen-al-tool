@@ -541,7 +541,7 @@ else:
 # CUSTOMER MASTER
 # ====================================================
 
-elif page=="Customer Master":
+if page=="Customer Master":
 
     st.title("Customer Master")
 
