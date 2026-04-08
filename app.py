@@ -472,7 +472,7 @@ if page=="Create Invoice":
     GST=subtotal*0.18
     sgst=subtotal*0.00
 
-    total=subtotal+GST+sgst+transport
+    total=subtotal+GST+sgst
 
     st.write("Subtotal:",subtotal)
     st.write("GST:",GST)
