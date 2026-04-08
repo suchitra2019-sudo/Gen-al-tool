@@ -494,29 +494,36 @@ if page=="Create Invoice":
 
 # Generate
 
-    if st.button("Generate Invoice"):
+   if st.button("Generate Invoice"):
 
-         cursor.execute(
-        "INSERT INTO invoices (invoice_no,customer,date,total) VALUES (?,?,?,?)",
-        (invoice_no,customer_name,str(invoice_date),total)
+    if not customer_name:
+        st.error("Enter Customer Name")
+
+    elif len(items) == 0:
+        st.error("Add at least one item")
+
+    else:
+        cursor.execute(
+            "INSERT INTO invoices (invoice_no,customer,date,total) VALUES (?,?,?,?)",
+            (invoice_no,customer_name,str(invoice_date),total)
         )
 
         conn.commit()
 
-        pdf=generate_pdf(
-        company,address,gst,logo_path,
-        invoice_no,invoice_date,
-        customer_name,contact,gstin,
-        items,subtotal,GST,sgst,transport,total
+        pdf = generate_pdf(
+            company,address,gst,logo_path,
+            invoice_no,invoice_date,
+            customer_name,contact,gstin,
+            items,subtotal,cgst,sgst,transport,total
         )
 
         st.success("Invoice Created")
 
         st.download_button(
-        label="Download Invoice PDF",
-        data=pdf,
-        file_name=f"invoice_{invoice_no}.pdf",
-        mime="application/pdf"
+            label="Download Invoice PDF",
+            data=pdf,
+            file_name=f"invoice_{invoice_no}.pdf",
+            mime="application/pdf"
         )
 
 # ====================================================
