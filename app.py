@@ -496,7 +496,7 @@ if page=="Create Invoice":
 
     if st.button("Generate Invoice"):
 
-        if not customer_name:
+    if not customer_name:
     st.error("Enter Customer Name")
 elif len(items) == 0:
     st.error("Add at least one item")
