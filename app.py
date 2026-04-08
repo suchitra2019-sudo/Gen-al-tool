@@ -496,7 +496,7 @@ if page=="Create Invoice":
 
     if st.button("Generate Invoice"):
 
-    cursor.execute(
+         cursor.execute(
         "INSERT INTO invoices (invoice_no,customer,date,total) VALUES (?,?,?,?)",
         (invoice_no,customer_name,str(invoice_date),total)
         )
