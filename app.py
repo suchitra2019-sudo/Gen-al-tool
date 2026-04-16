@@ -430,8 +430,8 @@ if page=="Create Invoice":
         contact=st.text_input("Contact")
         gstin=st.text_input("GSTIN")
 
-    invoice_date=st.date_input("Invoice Date",date.today())
-    formatted_date = invoice_date.strftime("%d-%m-%Y")
+    formatted_date =st.date_input("Invoice Date",date.today())
+    formatted_date = formatted_date .strftime("%d-%m-%Y")
 
 # Products
 
@@ -486,7 +486,7 @@ if page=="Create Invoice":
 
         html=generate_invoice_html(
         company,address,gst,logo_path,
-        invoice_no,invoice_date,
+        invoice_no,formatted_date ,
         customer_name,contact,gstin,
         items,subtotal,GST,sgst,transport,total
         )
@@ -499,14 +499,14 @@ if page=="Create Invoice":
 
         cursor.execute(
         "INSERT INTO invoices (invoice_no,customer,date,total) VALUES (?,?,?,?)",
-        (invoice_no,customer_name,str(invoice_date),total)
+        (invoice_no,customer_name,str(formatted_date ),total)
         )
 
         conn.commit()
 
         pdf=generate_pdf(
         company,address,gst,logo_path,
-        invoice_no,invoice_date,
+        invoice_no,formatted_date ,
         customer_name,contact,gstin,
         items,subtotal,GST,sgst,transport,total
         )
