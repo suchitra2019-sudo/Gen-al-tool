@@ -515,7 +515,7 @@ if page=="Create Invoice":
                 company, address, gst, logo_path,
                 invoice_no, invoice_date,
                 customer_name, contact, gstin,
-                items, subtotal, , transport, total
+                items, subtotal,gst_amount, transport, total
             )
 
             st.success("Invoice Created")
