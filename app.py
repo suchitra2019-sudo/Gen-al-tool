@@ -431,6 +431,7 @@ if page=="Create Invoice":
         gstin=st.text_input("GSTIN")
 
     invoice_date=st.date_input("Invoice Date",date.today())
+    formatted_date = invoice_date.strftime("%d-%m-%Y")
 
 # Products
 
