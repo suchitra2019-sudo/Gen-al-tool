@@ -45,6 +45,13 @@ contact TEXT,
 gstin TEXT)
 """)
 
+st.write("CHECK PARAM COUNT:", len([
+    company, address, gst, logo_path,
+    invoice_no, date,
+    customer, contact, gstin,
+    items, subtotal, gst_amount, transport, total
+]))
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS products(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
