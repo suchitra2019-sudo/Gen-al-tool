@@ -82,7 +82,7 @@ page = st.sidebar.radio(
 # ====================================================
 
 def generate_invoice_html(company,address,gst,logo,
-invoice_no,date,customer,contact,gstin,
+invoice_no,formatted_date,customer,contact,gstin,
 items,subtotal,GST,sgst,transport,total):
 
     rows=""
@@ -245,7 +245,7 @@ items,subtotal,GST,sgst,transport,total):
 
     info = Table([
         ["Invoice Date","Terms","Due Date"],
-        [str(date),"Due on Receipt",str(date)]
+        [str(formatted_date),"Due on Receipt",str(formatted_date)]
     ],colWidths=[166,166,166])
 
     info.setStyle(TableStyle([
