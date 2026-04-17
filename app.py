@@ -76,7 +76,7 @@ if menu == "Create Invoice":
     st.title("GST Invoice Generator")
 
     invoice_no = st.number_input("Invoice No", 501)
-    company = st.text_input("Company",'SHIVKRUTI ENTERPRISES',"disabled=True")
+    company = st.text_input("Company",'SHIVKRUTI ENTERPRISES',disabled=True)
     address = st.text_area("Address",'HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI,DIST-THANE')
     gst = st.text_input("GST",'27CFKPP2024L1Z7')
     logo = "logo.png"
