@@ -75,7 +75,7 @@ if menu == "Create Invoice":
 
     st.title("GST Invoice Generator")
 
-    invoice_no = st.number_input("Invoice No", 1001)
+    invoice_no = st.number_input("Invoice No", INV-01)
     company = st.text_input("Company")
     address = st.text_area("Address")
     gst = st.text_input("GST")
