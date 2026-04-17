@@ -103,17 +103,17 @@ items,subtotal,GST,sgst,transport,total):
     html = f"""
 
     <style>
-    body{font-family:Arial}
+    body{{font-family:Arial}}
 
-    .invoice{width:800px;margin:auto;border:1px solid #ddd;padding:20px}
+    .invoice{{width:800px;margin:auto;border:1px solid #ddd;padding:20px}}
 
-    table{width:100%;border-collapse:collapse}
+    table{{width:100%;border-collapse:collapse}}
 
-    th,td{border:1px solid #ccc;padding:8px}
+    th,td{{border:1px solid #ccc;padding:8px}}
 
-    th{background:#1f4e79;color:white}
+    th{{background:#1f4e79;color:white}}
 
-    .header{display:flex;justify-content:space-between}
+    .header{{display:flex;justify-content:space-between}}
     </style>
 
     <div class="invoice">
