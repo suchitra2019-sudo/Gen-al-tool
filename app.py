@@ -102,8 +102,6 @@ items,subtotal,GST,sgst,transport,total):
     if logo and os.path.exists(logo):
        logo_html = f'<img src="{logo}" width="120">'
 
-    html = f"""
-
     <style>
     body{{font-family:Arial}}
 
