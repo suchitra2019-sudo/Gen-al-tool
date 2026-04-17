@@ -78,7 +78,7 @@ if menu == "Create Invoice":
     invoice_no = st.number_input("Invoice No", 501)
     company = st.text_input("Company",'SHIVKRUTI ENTERPRISES',disabled=True)
     address = st.text_area("Address",'HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI,DIST-THANE',disabled=True)
-    gst = st.text_input("GST",'27CFKPP2024L1Z7,disabled=True
+    gst = st.text_input("GST",'27CFKPP2024L1Z7',disabled=True
     logo = "logo.png"
 
     customer = st.text_input("Customer")
