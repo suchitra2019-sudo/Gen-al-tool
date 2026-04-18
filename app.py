@@ -18,13 +18,16 @@ conn = sqlite3.connect("billing.db", check_same_thread=False)
 cursor = conn.cursor()
 
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS customers(
+CREATE TABLE IF NOT EXISTS invoices(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT,
-    contact TEXT,
-    gstin TEXT
+    invoice_no INTEGER,
+    customer TEXT,
+    date TEXT,
+    total REAL
 )
 """)
+
+conn.commit()
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS products(
@@ -56,9 +59,18 @@ page = st.sidebar.radio(
 
 # ---------------- AUTO INVOICE ----------------
 def get_invoice_no():
-    cursor.execute("SELECT MAX(invoice_no) FROM invoices")
-    result = cursor.fetchone()[0]
-    return 1001 if result is None else result + 1
+    try:
+        cursor.execute("SELECT MAX(invoice_no) FROM invoices")
+        result = cursor.fetchone()
+
+        if result and result[0]:
+            return result[0] + 1
+        else:
+            return 1001
+
+    except Exception as e:
+        st.error(f"DB Error: {e}")
+        return 1001
 
 
 # ---------------- PDF FUNCTION ----------------
