@@ -127,9 +127,9 @@ def generate_pdf(company,address,gst,logo,invoice_no,formatted_date,customer,con
 st.title("GST Invoice Generator")
 
 invoice_no=1001
-company=st.text_input("Company")
-address=st.text_area("Address")
-gst=st.text_input("GST")
+company=st.text_input("Company",'SHIVKRUTI ENTERPRISES',disabled=True)
+address=st.text_area("Address",'HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI,DIST-THANE',disabled=True)
+gst=st.text_input("GST",'27CFKPP2024L1Z7',,disabled=True)
 logo="logo.png"
 
 customer=st.text_input("Customer")
