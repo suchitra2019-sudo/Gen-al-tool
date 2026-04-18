@@ -99,11 +99,8 @@ items,subtotal,GST,sgst,transport,total):
         """
 
     logo_html=""
-
-    if logo:
-        logo_html=f'<img src="{logo}" width="120">'
-
-    html=f"""
+    if logo and os.path.exists(logo):
+    html = f"""
 
     <style>
     body{{font-family:Arial}}
@@ -406,10 +403,13 @@ if page=="Create Invoice":
 
     logo_file=st.sidebar.file_uploader("Upload Company Logo")
 
-    logo_path=None
+    logo_path= os.path.join(os.getcwd(), "logo.png")
+    import os
 
-    if logo_file:
-        logo_path=logo_file
+    if logo and os.path.exists(logo):
+        logo_img = Image(logo, width=80, height=60)
+    else:
+        logo_img = ""
 
 # Customer
 
