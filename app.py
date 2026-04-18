@@ -157,7 +157,7 @@ subtotal=sum(q*p for _,q,p in items)
 GST=subtotal*0.18
 sgst=0
 
-total=subtotal+GST+transport
+total=subtotal+GST
 
 st.write("Subtotal:",subtotal)
 st.write("GST:",GST)
