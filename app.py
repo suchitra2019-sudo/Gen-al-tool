@@ -60,6 +60,9 @@ def generate_pdf(company,address,gst,logo,invoice_no,formatted_date,customer,con
     elements.append(header)
     elements.append(Spacer(1,20))
 
+    if os.path.exists(signature):
+    elements.append(Image(signature, 120, 50))
+
     # TITLE
     title = Table([["INVOICE",f"Invoice # {invoice_no}"]],colWidths=[350,150])
     title.setStyle(TableStyle([("FONTSIZE",(0,0),(0,0),18),("ALIGN",(1,0),(1,0),"RIGHT")]))
@@ -144,6 +147,7 @@ company=st.text_input("Company",'SHIVKRUTI ENTERPRISES',disabled=True)
 address=st.text_area("Address",'HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI,DIST-THANE',disabled=True)
 gst=st.text_input("GST",'27CFKPP2024L1Z7',disabled=True)
 logo="logo.png"
+signature = "signature.png"
 
 customer=st.text_input("Customer")
 contact=st.text_input("Contact")
