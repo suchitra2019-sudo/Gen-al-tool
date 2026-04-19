@@ -126,7 +126,20 @@ def generate_pdf(company,address,gst,logo,invoice_no,formatted_date,customer,con
 # ---------------- UI ----------------
 st.title("GST Invoice Generator")
 
-invoice_no=1001
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS invoices(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    invoice_no INTEGER
+)
+""")
+conn.commit()
+
+def get_invoice_no():
+    cursor.execute("SELECT MAX(invoice_no) FROM invoices")
+    result = cursor.fetchone()[0]
+    return 1001 if result is None else result + 1
+
+invoice_no = get_invoice_no()
 company=st.text_input("Company",'SHIVKRUTI ENTERPRISES',disabled=True)
 address=st.text_area("Address",'HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI,DIST-THANE',disabled=True)
 gst=st.text_input("GST",'27CFKPP2024L1Z7',disabled=True)
