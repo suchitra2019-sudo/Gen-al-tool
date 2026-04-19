@@ -59,9 +59,6 @@ def generate_pdf(company,address,gst,logo,invoice_no,formatted_date,customer,con
     header = Table([[logo_img, Paragraph(f"<b>{company}</b><br/>{address}<br/>GSTIN:{gst}",styles['Normal'])]],colWidths=[80,420])
     elements.append(header)
     elements.append(Spacer(1,20))
-
-    if os.path.exists(Signature):
-        elements.append(Image(Signature, 120, 50))
        
     # TITLE
     title = Table([["INVOICE",f"Invoice # {invoice_no}"]],colWidths=[350,150])
@@ -120,7 +117,9 @@ def generate_pdf(company,address,gst,logo,invoice_no,formatted_date,customer,con
     elements.append(Paragraph("Payment Terms: Due within 15 days",styles["Normal"]))
     elements.append(Spacer(1,20))
 
-    elements.append(Paragraph("Authorized Signature",styles["Normal"]))
+    if signature and os.path.exists(signature):
+        elements.append(Paragraph("Authorized Signature", styles["Normal"]))
+        elements.append(Image(signature, 120, 50))
 
     doc.build(elements)
     buffer.seek(0)
@@ -147,7 +146,7 @@ company=st.text_input("Company",'SHIVKRUTI ENTERPRISES',disabled=True)
 address=st.text_area("Address",'HOUSE NO-301, VAJRESHWARI ROAD, AT.ZIDKE POST DIGASHI TAL.BHIWANDI,DIST-THANE',disabled=True)
 gst=st.text_input("GST",'27CFKPP2024L1Z7',disabled=True)
 logo="logo.png"
-signature = "Signature.png"
+signature = "signature.png"
 
 customer=st.text_input("Customer")
 contact=st.text_input("Contact")
