@@ -183,3 +183,6 @@ if st.button("Preview"):
 if st.button("Download PDF"):
     pdf=generate_pdf(company,address,gst,logo,invoice_no,formatted_date,customer,contact,gstin,items,subtotal,GST,sgst,transport,total)
     st.download_button("Download",pdf,file_name="invoice.pdf")
+
+cursor.execute("INSERT INTO invoices (invoice_no) VALUES (?)", (invoice_no,))
+conn.commit()
