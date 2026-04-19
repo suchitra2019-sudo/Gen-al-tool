@@ -61,8 +61,8 @@ def generate_pdf(company,address,gst,logo,invoice_no,formatted_date,customer,con
     elements.append(Spacer(1,20))
 
     if os.path.exists(signature):
-    elements.append(Image(signature, 120, 50))
-
+        elements.append(Image(signature, 120, 50))
+       
     # TITLE
     title = Table([["INVOICE",f"Invoice # {invoice_no}"]],colWidths=[350,150])
     title.setStyle(TableStyle([("FONTSIZE",(0,0),(0,0),18),("ALIGN",(1,0),(1,0),"RIGHT")]))
