@@ -114,8 +114,21 @@ def generate_pdf(company,address,gst,logo,invoice_no,formatted_date,customer,con
 
     elements.append(Spacer(1,30))
 
+    sign_table = Table([
+        ["Company Stamp", "Authorized Signature"]], colWidths=[250, 250])
+    
+    sign_table.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (0, 0), "LEFT"),
+        ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold")
+    ]))
+    elements.append(sign_table)
+    elements.append(Spacer(1, 10))
+
     elements.append(Paragraph("Payment Terms: Due within 15 days",styles["Normal"]))
     elements.append(Spacer(1,20))
+
+    elements.append(Spacer(1, 40))
 
     if signature and os.path.exists(signature):
         elements.append(Paragraph("Authorized Signature", styles["Normal"]))
